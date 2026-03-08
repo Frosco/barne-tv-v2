@@ -1,0 +1,15 @@
+[Unit]
+Description=Barne-TV v2
+After=network.target
+
+[Service]
+Type=simple
+User=barnetv
+Group=barnetv
+WorkingDirectory=/opt/barne-tv
+ExecStart=/opt/barne-tv/barne-tv-v2 -config /opt/barne-tv/config.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

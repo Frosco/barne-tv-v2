@@ -5,6 +5,7 @@
     var player = null;
     var playerContainer = document.getElementById("player-container");
     var grid = document.querySelector(".grid");
+    var shuffleBtn = document.getElementById("shuffle-btn");
 
     // YouTube IFrame API ready callback
     window.onYouTubeIframeAPIReady = function () {
@@ -17,9 +18,10 @@
         if (!cell || !ytReady) return;
 
         var videoId = cell.getAttribute("data-video-id");
-        if (!videoId) return;
+        if (!videoId || player) return;
 
         grid.hidden = true;
+        shuffleBtn.hidden = true;
         playerContainer.hidden = false;
 
         player = new YT.Player("player", {
@@ -63,6 +65,7 @@
             playerContainer.hidden = true;
             playerContainer.classList.remove("fade-out");
             grid.hidden = false;
+            shuffleBtn.hidden = false;
         }, 2000);
     }
 

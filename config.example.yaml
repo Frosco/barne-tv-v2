@@ -1,0 +1,9 @@
+youtube_api_key: "YOUR_YOUTUBE_API_KEY"
+refresh_interval: "6h"
+sources:
+  - type: channel
+    id: "UCxxxxxxxxxxxxxxxxxxxxxxxx"
+    name: "Example Channel"
+  - type: playlist
+    id: "PLxxxxxxxxxxxxxxxxxxxxxxxx"
+    name: "Example Playlist"

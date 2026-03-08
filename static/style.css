@@ -1,0 +1,242 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg-warm: #FFF8F0;
+    --cell-bg: #FFFFFF;
+    --title-color: #3D2C22;
+    --shuffle-bg: #FF8C42;
+    --font: 'Fredoka', sans-serif;
+    --radius: 20px;
+    --grid-gap: 20px;
+}
+
+html, body {
+    height: 100%;
+    font-family: var(--font);
+    color: var(--title-color);
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+}
+
+body {
+    background:
+        radial-gradient(ellipse at 15% 30%, hsla(340, 85%, 88%, 0.5) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 25%, hsla(195, 85%, 88%, 0.5) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 85%, hsla(48, 90%, 88%, 0.5) 0%, transparent 50%),
+        radial-gradient(ellipse at 75% 70%, hsla(145, 75%, 88%, 0.4) 0%, transparent 40%),
+        var(--bg-warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* === Grid === */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--grid-gap);
+    max-width: 900px;
+    width: 100%;
+}
+
+/* === Grid Cells === */
+
+.grid-cell {
+    background: var(--cell-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border-bottom: 5px solid var(--accent, #FF8C42);
+    animation: popIn 0.4s ease-out backwards;
+}
+
+.grid-cell:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.grid-cell:active {
+    transform: scale(0.97);
+}
+
+/* Accent colors and staggered entrance per cell */
+.grid-cell:nth-child(1) { --accent: #FF6B6B; animation-delay: 0s; }
+.grid-cell:nth-child(2) { --accent: #4ECDC4; animation-delay: 0.05s; }
+.grid-cell:nth-child(3) { --accent: #FFD93D; animation-delay: 0.1s; }
+.grid-cell:nth-child(4) { --accent: #A78BFA; animation-delay: 0.15s; }
+.grid-cell:nth-child(5) { --accent: #6BCB77; animation-delay: 0.2s; }
+.grid-cell:nth-child(6) { --accent: #FFB347; animation-delay: 0.25s; }
+.grid-cell:nth-child(7) { --accent: #FF85A1; animation-delay: 0.3s; }
+.grid-cell:nth-child(8) { --accent: #45B7D1; animation-delay: 0.35s; }
+.grid-cell:nth-child(9) { --accent: #96E6A1; animation-delay: 0.4s; }
+
+.grid-cell img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+}
+
+.grid-cell .title {
+    display: block;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+/* === Shuffle Button === */
+
+.shuffle-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: none;
+    background: var(--shuffle-bg);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(255, 140, 66, 0.4);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: bob 3s ease-in-out infinite;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.shuffle-btn:hover {
+    animation: none;
+    transform: scale(1.1) rotate(15deg);
+    box-shadow: 0 6px 24px rgba(255, 140, 66, 0.5);
+}
+
+.shuffle-btn:active {
+    transform: scale(0.95);
+}
+
+/* === Player === */
+
+.player-container {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #000;
+    transition: opacity 1.5s ease;
+}
+
+.player-container[hidden] {
+    display: none;
+}
+
+.player-container.fade-out {
+    opacity: 0;
+}
+
+.player-container iframe,
+.player-container > div {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* === Animations === */
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.85) translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* === Responsive: phones === */
+
+@media (max-width: 600px) {
+    :root {
+        --grid-gap: 12px;
+        --radius: 14px;
+    }
+
+    body {
+        padding: 12px;
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-cell .title {
+        font-size: 0.78rem;
+        padding: 8px 10px;
+    }
+
+    .shuffle-btn {
+        width: 52px;
+        height: 52px;
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .shuffle-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* === Responsive: TVs and large screens === */
+
+@media (min-width: 1400px) {
+    :root {
+        --grid-gap: 32px;
+        --radius: 28px;
+    }
+
+    .grid {
+        max-width: 1200px;
+    }
+
+    .grid-cell .title {
+        font-size: 1.1rem;
+        padding: 14px 18px;
+    }
+
+    .shuffle-btn {
+        width: 80px;
+        height: 80px;
+        bottom: 40px;
+        right: 40px;
+    }
+
+    .shuffle-btn svg {
+        width: 40px;
+        height: 40px;
+    }
+}

@@ -61,46 +61,57 @@ func (yt *YouTubeClient) FetchPlaylistVideos(playlistID string) ([]Video, error)
 	pageToken := ""
 
 	for {
-		params := url.Values{
-			"part":       {"snippet"},
-			"playlistId": {playlistID},
-			"maxResults": {"50"},
-			"key":        {yt.APIKey},
-		}
-		if pageToken != "" {
-			params.Set("pageToken", pageToken)
-		}
-
-		resp, err := yt.HTTP.Get(yt.BaseURL + "/playlistItems?" + params.Encode())
+		videos, nextToken, err := yt.fetchPlaylistPage(playlistID, pageToken)
 		if err != nil {
-			return nil, fmt.Errorf("fetching playlist %s: %w", playlistID, err)
+			return nil, err
 		}
-		defer resp.Body.Close()
+		all = append(all, videos...)
 
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("YouTube API returned %d for playlist %s", resp.StatusCode, playlistID)
-		}
-
-		var result playlistItemsResponse
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			return nil, fmt.Errorf("decoding playlist response: %w", err)
-		}
-
-		for _, item := range result.Items {
-			all = append(all, Video{
-				ID:           item.Snippet.ResourceID.VideoID,
-				Title:        item.Snippet.Title,
-				ThumbnailURL: item.Snippet.Thumbnails.High.URL,
-			})
-		}
-
-		if result.NextPageToken == "" {
+		if nextToken == "" {
 			break
 		}
-		pageToken = result.NextPageToken
+		pageToken = nextToken
 	}
 
 	return all, nil
+}
+
+func (yt *YouTubeClient) fetchPlaylistPage(playlistID, pageToken string) ([]Video, string, error) {
+	params := url.Values{
+		"part":       {"snippet"},
+		"playlistId": {playlistID},
+		"maxResults": {"50"},
+		"key":        {yt.APIKey},
+	}
+	if pageToken != "" {
+		params.Set("pageToken", pageToken)
+	}
+
+	resp, err := yt.HTTP.Get(yt.BaseURL + "/playlistItems?" + params.Encode())
+	if err != nil {
+		return nil, "", fmt.Errorf("fetching playlist %s: %w", playlistID, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("YouTube API returned %d for playlist %s", resp.StatusCode, playlistID)
+	}
+
+	var result playlistItemsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, "", fmt.Errorf("decoding playlist response: %w", err)
+	}
+
+	var videos []Video
+	for _, item := range result.Items {
+		videos = append(videos, Video{
+			ID:           item.Snippet.ResourceID.VideoID,
+			Title:        item.Snippet.Title,
+			ThumbnailURL: item.Snippet.Thumbnails.High.URL,
+		})
+	}
+
+	return videos, result.NextPageToken, nil
 }
 
 func (yt *YouTubeClient) FetchChannelVideos(channelID string) ([]Video, error) {

@@ -35,44 +35,48 @@
         });
     });
 
-    // Video end detection
+    // Video end detection — load fresh selection
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
-            returnToGrid();
+            returnToGrid(true);
         }
     }
 
     // Clean up player and return to the grid
-    function returnToGrid() {
+    // shuffle=true: video ended naturally, load new videos
+    // shuffle=false: user pressed Escape, show same grid
+    function returnToGrid(shuffle) {
         if (!player) return;
 
-        playerContainer.classList.add("fade-out");
+        // Destroy immediately to hide YouTube's end-screen recommendations
+        player.destroy();
+        player = null;
 
+        // Recreate the player div for next use
+        var div = document.createElement("div");
+        div.id = "player";
+        playerContainer.innerHTML = "";
+        playerContainer.appendChild(div);
+
+        // Brief pause on black screen, then back to grid
         setTimeout(function () {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             }
-
-            player.destroy();
-            player = null;
-
-            // Recreate the player div for next use
-            var div = document.createElement("div");
-            div.id = "player";
-            playerContainer.innerHTML = "";
-            playerContainer.appendChild(div);
-
-            playerContainer.hidden = true;
-            playerContainer.classList.remove("fade-out");
-            grid.hidden = false;
-            shuffleBtn.hidden = false;
-        }, 2000);
+            if (shuffle) {
+                window.location = "/?shuffle=1";
+            } else {
+                playerContainer.hidden = true;
+                grid.hidden = false;
+                shuffleBtn.hidden = false;
+            }
+        }, 1500);
     }
 
-    // Handle fullscreen exit (e.g. user pressed Escape)
+    // Handle fullscreen exit (e.g. user pressed Escape) — keep same grid
     document.addEventListener("fullscreenchange", function () {
         if (!document.fullscreenElement && player) {
-            returnToGrid();
+            returnToGrid(false);
         }
     });
 

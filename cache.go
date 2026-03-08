@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand/v2"
 	"sync"
@@ -61,6 +62,7 @@ func (c *VideoCache) GetByIDs(ids []string) []Video {
 
 func (c *VideoCache) RefreshAll(yt *YouTubeClient, sources []Source) error {
 	var all []Video
+	var fetchErrors int
 
 	for _, src := range sources {
 		var videos []Video
@@ -78,6 +80,7 @@ func (c *VideoCache) RefreshAll(yt *YouTubeClient, sources []Source) error {
 
 		if err != nil {
 			log.Printf("error fetching %s (%s): %v", src.Name, src.ID, err)
+			fetchErrors++
 			continue
 		}
 
@@ -86,6 +89,10 @@ func (c *VideoCache) RefreshAll(yt *YouTubeClient, sources []Source) error {
 
 	c.Store(all)
 	log.Printf("cache refreshed: %d videos from %d sources", len(all), len(sources))
+
+	if len(all) == 0 && fetchErrors > 0 {
+		return fmt.Errorf("all %d sources failed to fetch", fetchErrors)
+	}
 	return nil
 }
 

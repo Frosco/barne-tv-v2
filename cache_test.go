@@ -1,12 +1,21 @@
 package main
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func silenceLogs(t *testing.T) {
+	t.Helper()
+	orig := log.Writer()
+	log.SetOutput(io.Discard)
+	t.Cleanup(func() { log.SetOutput(orig) })
+}
 
 func TestVideoCacheRandomSelection(t *testing.T) {
 	cache := &VideoCache{}
@@ -97,6 +106,7 @@ func TestVideoCacheGetByIDsMissing(t *testing.T) {
 }
 
 func TestVideoCacheRefreshAll(t *testing.T) {
+	silenceLogs(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
@@ -132,7 +142,28 @@ func TestVideoCacheRefreshAll(t *testing.T) {
 	}
 }
 
+func TestVideoCacheRefreshAllAllFail(t *testing.T) {
+	silenceLogs(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	yt := &YouTubeClient{APIKey: "key", BaseURL: server.URL, HTTP: server.Client()}
+	sources := []Source{
+		{Type: "channel", ID: "UC1", Name: "Bad Chan"},
+		{Type: "playlist", ID: "PL1", Name: "Bad List"},
+	}
+
+	cache := &VideoCache{}
+	err := cache.RefreshAll(yt, sources)
+	if err == nil {
+		t.Error("expected error when all sources fail")
+	}
+}
+
 func TestStartPeriodicRefresh(t *testing.T) {
+	silenceLogs(t)
 	var callCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount.Add(1)

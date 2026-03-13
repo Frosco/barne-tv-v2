@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("parsing template: %v", err)
 	}
 
-	handler := &GridHandler{Cache: cache, Template: tmpl, GridSize: 9}
+	handler := &GridHandler{Cache: cache, Template: tmpl, GridSize: 12}
 
 	http.Handle("/", handler)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

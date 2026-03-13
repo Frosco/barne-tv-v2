@@ -19,11 +19,11 @@
 }
 
 html, body {
-    height: 100%;
+    min-height: 100%;
     font-family: var(--font);
     color: var(--title-color);
     -webkit-tap-highlight-color: transparent;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 body {
@@ -34,7 +34,7 @@ body {
         radial-gradient(ellipse at 75% 70%, hsla(145, 75%, 88%, 0.4) 0%, transparent 40%),
         var(--bg-warm);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 20px;
 }
@@ -80,7 +80,10 @@ body {
 .grid-cell:nth-child(6) { --accent: #FFB347; animation-delay: 0.25s; }
 .grid-cell:nth-child(7) { --accent: #FF85A1; animation-delay: 0.3s; }
 .grid-cell:nth-child(8) { --accent: #45B7D1; animation-delay: 0.35s; }
-.grid-cell:nth-child(9) { --accent: #96E6A1; animation-delay: 0.4s; }
+.grid-cell:nth-child(9)  { --accent: #96E6A1; animation-delay: 0.4s; }
+.grid-cell:nth-child(10) { --accent: #F9A8D4; animation-delay: 0.45s; }
+.grid-cell:nth-child(11) { --accent: #67E8F9; animation-delay: 0.5s; }
+.grid-cell:nth-child(12) { --accent: #FDE68A; animation-delay: 0.55s; }
 
 .grid-cell img {
     width: 100%;
@@ -180,8 +183,6 @@ body {
 
     body {
         padding: 12px;
-        align-items: flex-start;
-        overflow-y: auto;
     }
 
     .grid {

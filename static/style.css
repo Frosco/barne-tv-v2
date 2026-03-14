@@ -84,6 +84,12 @@ body {
 .grid-cell:nth-child(10) { --accent: #F9A8D4; animation-delay: 0.45s; }
 .grid-cell:nth-child(11) { --accent: #67E8F9; animation-delay: 0.5s; }
 .grid-cell:nth-child(12) { --accent: #FDE68A; animation-delay: 0.55s; }
+.grid-cell:nth-child(13) { --accent: #C084FC; animation-delay: 0.6s; }
+.grid-cell:nth-child(14) { --accent: #34D399; animation-delay: 0.65s; }
+.grid-cell:nth-child(15) { --accent: #FB923C; animation-delay: 0.7s; }
+.grid-cell:nth-child(16) { --accent: #F472B6; animation-delay: 0.75s; }
+.grid-cell:nth-child(17) { --accent: #38BDF8; animation-delay: 0.8s; }
+.grid-cell:nth-child(18) { --accent: #BEF264; animation-delay: 0.85s; }
 
 .grid-cell img {
     width: 100%;

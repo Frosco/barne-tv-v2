@@ -13,8 +13,10 @@ ssh "$SERVER" "systemctl stop barne-tv"
 
 echo "==> Uploading binary and assets"
 scp barne-tv-v2-linux "$SERVER:$DEPLOY_DIR/barne-tv-v2"
-scp -r templates/ "$SERVER:$DEPLOY_DIR/templates/"
-scp -r static/ "$SERVER:$DEPLOY_DIR/static/"
+rsync -a --delete templates/ "$SERVER:$DEPLOY_DIR/templates/"
+echo "    templates/ synced"
+rsync -a --delete static/ "$SERVER:$DEPLOY_DIR/static/"
+echo "    static/ synced"
 
 echo "==> Setting ownership and starting service"
 ssh "$SERVER" "chown -R barnetv:barnetv $DEPLOY_DIR && systemctl start barne-tv"

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -17,61 +18,25 @@ func silenceLogs(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(orig) })
 }
 
-func TestVideoCacheRandomSelection(t *testing.T) {
+
+func TestRandomCappedEmpty(t *testing.T) {
 	cache := &VideoCache{}
-	videos := []Video{
-		{ID: "v1", Title: "One", ThumbnailURL: "http://img/1"},
-		{ID: "v2", Title: "Two", ThumbnailURL: "http://img/2"},
-		{ID: "v3", Title: "Three", ThumbnailURL: "http://img/3"},
-		{ID: "v4", Title: "Four", ThumbnailURL: "http://img/4"},
-		{ID: "v5", Title: "Five", ThumbnailURL: "http://img/5"},
-	}
-	cache.Store(videos)
-
-	selected := cache.Random(3)
-	if len(selected) != 3 {
-		t.Fatalf("got %d videos, want 3", len(selected))
-	}
-
-	// All selected videos should be from the pool
-	pool := make(map[string]bool)
-	for _, v := range videos {
-		pool[v.ID] = true
-	}
-	for _, v := range selected {
-		if !pool[v.ID] {
-			t.Errorf("selected video %s not in pool", v.ID)
-		}
-	}
-
-	// No duplicates
-	seen := make(map[string]bool)
-	for _, v := range selected {
-		if seen[v.ID] {
-			t.Errorf("duplicate video %s in selection", v.ID)
-		}
-		seen[v.ID] = true
+	if got := cache.RandomCapped(9, 2); got != nil {
+		t.Errorf("RandomCapped on empty cache = %+v, want nil", got)
 	}
 }
 
-func TestVideoCacheRandomSelectionMoreThanPool(t *testing.T) {
+func TestRandomCappedFewerVideosThanGrid(t *testing.T) {
 	cache := &VideoCache{}
 	cache.Store([]Video{
-		{ID: "v1", Title: "One", ThumbnailURL: "http://img/1"},
-		{ID: "v2", Title: "Two", ThumbnailURL: "http://img/2"},
+		{ID: "v1", SourceID: "S1"},
+		{ID: "v2", SourceID: "S1"},
+		{ID: "v3", SourceID: "S2"},
 	})
 
-	selected := cache.Random(9)
-	if len(selected) != 2 {
-		t.Fatalf("got %d videos, want 2 (pool size)", len(selected))
-	}
-}
-
-func TestVideoCacheRandomSelectionEmpty(t *testing.T) {
-	cache := &VideoCache{}
-	selected := cache.Random(9)
-	if len(selected) != 0 {
-		t.Fatalf("got %d videos from empty cache, want 0", len(selected))
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 3 {
+		t.Errorf("len = %d, want 3", len(got))
 	}
 }
 
@@ -131,14 +96,20 @@ func TestVideoCacheRefreshAll(t *testing.T) {
 	}
 
 	cache := &VideoCache{}
-	err := cache.RefreshAll(yt, sources)
-	if err != nil {
+	if err := cache.RefreshAll(yt, sources); err != nil {
 		t.Fatalf("RefreshAll: %v", err)
 	}
 
-	all := cache.Random(100)
-	if len(all) != 2 {
-		t.Fatalf("got %d videos, want 2", len(all))
+	// Each video should be tagged with the ID of the source that produced it.
+	bySource := map[string]string{}
+	for _, v := range cache.videos {
+		bySource[v.ID] = v.SourceID
+	}
+	if got := bySource["cv1"]; got != "UC1" {
+		t.Errorf("cv1 SourceID = %q, want %q", got, "UC1")
+	}
+	if got := bySource["pv1"]; got != "PL1" {
+		t.Errorf("pv1 SourceID = %q, want %q", got, "PL1")
 	}
 }
 
@@ -182,5 +153,103 @@ func TestStartPeriodicRefresh(t *testing.T) {
 
 	if callCount.Load() < 2 {
 		t.Errorf("expected at least 2 refresh calls, got %d", callCount.Load())
+	}
+}
+
+func TestRandomCappedSingleSource(t *testing.T) {
+	cache := &VideoCache{}
+	videos := make([]Video, 100)
+	for i := range videos {
+		videos[i] = Video{ID: fmt.Sprintf("v%d", i), SourceID: "S1"}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+	for _, v := range got {
+		if v.SourceID != "S1" {
+			t.Errorf("got video with SourceID %q, want S1", v.SourceID)
+		}
+	}
+}
+
+func TestRandomCappedRespectsCap(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for i := range 100 {
+		videos = append(videos, Video{ID: fmt.Sprintf("a%d", i), SourceID: "A"})
+	}
+	for _, src := range []string{"B", "C", "D", "E"} {
+		for i := range 10 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	countA := 0
+	for _, v := range got {
+		if v.SourceID == "A" {
+			countA++
+		}
+	}
+	if countA > 6 {
+		t.Errorf("source A contributed %d videos, want <= 6", countA)
+	}
+}
+
+func TestRandomCappedDistributesAcrossSources(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		for i := range 20 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	counts := map[string]int{}
+	for _, v := range got {
+		counts[v.SourceID]++
+	}
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		if counts[src] != 6 {
+			t.Errorf("source %s contributed %d videos, want exactly 6", src, counts[src])
+		}
+	}
+}
+
+func TestRandomCappedRelaxesWhenUnderFilled(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for _, src := range []string{"A", "B"} {
+		for i := range 50 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	counts := map[string]int{}
+	for _, v := range got {
+		counts[v.SourceID]++
+	}
+	if counts["A"] <= 6 && counts["B"] <= 6 {
+		t.Errorf("both sources at or under cap (A=%d, B=%d); expected at least one to exceed cap because grid couldn't fill at cap=6 with 2 sources", counts["A"], counts["B"])
 	}
 }

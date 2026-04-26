@@ -19,7 +19,11 @@ func (c *VideoCache) Store(videos []Video) {
 	c.videos = videos
 }
 
-func (c *VideoCache) Random(n int) []Video {
+// RandomCapped returns up to n videos from the cache, with no single source
+// contributing more than capPerSource videos when avoidable. If the cap leaves
+// the result smaller than n, it relaxes per-source limits and tops up from
+// leftover videos until the result is full or the cache is exhausted.
+func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -27,17 +31,46 @@ func (c *VideoCache) Random(n int) []Video {
 		return nil
 	}
 
-	pool := make([]Video, len(c.videos))
-	copy(pool, c.videos)
+	// Group by SourceID and shuffle each group independently.
+	bySource := map[string][]Video{}
+	for _, v := range c.videos {
+		bySource[v.SourceID] = append(bySource[v.SourceID], v)
+	}
+	for src := range bySource {
+		group := bySource[src]
+		rand.Shuffle(len(group), func(i, j int) {
+			group[i], group[j] = group[j], group[i]
+		})
+		bySource[src] = group
+	}
 
-	rand.Shuffle(len(pool), func(i, j int) {
-		pool[i], pool[j] = pool[j], pool[i]
+	// Pass A: take up to capPerSource from each source.
+	var result []Video
+	var leftovers []Video
+	for _, group := range bySource {
+		take := min(capPerSource, len(group))
+		result = append(result, group[:take]...)
+		leftovers = append(leftovers, group[take:]...)
+	}
+
+	// Pass B: top up from leftovers if we're under n.
+	if len(result) < n && len(leftovers) > 0 {
+		rand.Shuffle(len(leftovers), func(i, j int) {
+			leftovers[i], leftovers[j] = leftovers[j], leftovers[i]
+		})
+		need := min(n-len(result), len(leftovers))
+		result = append(result, leftovers[:need]...)
+	}
+
+	// Final shuffle so overflow doesn't all sit at the end.
+	rand.Shuffle(len(result), func(i, j int) {
+		result[i], result[j] = result[j], result[i]
 	})
 
-	if n > len(pool) {
-		n = len(pool)
+	if len(result) > n {
+		result = result[:n]
 	}
-	return pool[:n]
+	return result
 }
 
 func (c *VideoCache) GetByIDs(ids []string) []Video {
@@ -84,6 +117,9 @@ func (c *VideoCache) RefreshAll(yt *YouTubeClient, sources []Source) error {
 			continue
 		}
 
+		for i := range videos {
+			videos[i].SourceID = src.ID
+		}
 		all = append(all, videos...)
 	}
 

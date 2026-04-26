@@ -19,7 +19,11 @@ func (c *VideoCache) Store(videos []Video) {
 	c.videos = videos
 }
 
-func (c *VideoCache) Random(n int) []Video {
+// RandomCapped returns up to n videos from the cache, with no single source
+// contributing more than capPerSource videos when avoidable. If the cap leaves
+// the result smaller than n, it relaxes per-source limits and tops up from
+// leftover videos until the result is full or the cache is exhausted.
+func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 

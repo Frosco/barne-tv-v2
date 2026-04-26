@@ -29,7 +29,11 @@ func (h *GridHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if videos == nil {
-		videos = h.Cache.Random(h.GridSize)
+		perSourceCap := h.GridSize / 5
+		if perSourceCap < 1 {
+			perSourceCap = 1
+		}
+		videos = h.Cache.RandomCapped(h.GridSize, perSourceCap)
 	}
 
 	// Set cookie with current selection

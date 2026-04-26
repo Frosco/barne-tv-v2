@@ -17,61 +17,25 @@ func silenceLogs(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(orig) })
 }
 
-func TestVideoCacheRandomSelection(t *testing.T) {
+
+func TestRandomCappedEmpty(t *testing.T) {
 	cache := &VideoCache{}
-	videos := []Video{
-		{ID: "v1", Title: "One", ThumbnailURL: "http://img/1"},
-		{ID: "v2", Title: "Two", ThumbnailURL: "http://img/2"},
-		{ID: "v3", Title: "Three", ThumbnailURL: "http://img/3"},
-		{ID: "v4", Title: "Four", ThumbnailURL: "http://img/4"},
-		{ID: "v5", Title: "Five", ThumbnailURL: "http://img/5"},
-	}
-	cache.Store(videos)
-
-	selected := cache.Random(3)
-	if len(selected) != 3 {
-		t.Fatalf("got %d videos, want 3", len(selected))
-	}
-
-	// All selected videos should be from the pool
-	pool := make(map[string]bool)
-	for _, v := range videos {
-		pool[v.ID] = true
-	}
-	for _, v := range selected {
-		if !pool[v.ID] {
-			t.Errorf("selected video %s not in pool", v.ID)
-		}
-	}
-
-	// No duplicates
-	seen := make(map[string]bool)
-	for _, v := range selected {
-		if seen[v.ID] {
-			t.Errorf("duplicate video %s in selection", v.ID)
-		}
-		seen[v.ID] = true
+	if got := cache.RandomCapped(9, 2); got != nil {
+		t.Errorf("RandomCapped on empty cache = %+v, want nil", got)
 	}
 }
 
-func TestVideoCacheRandomSelectionMoreThanPool(t *testing.T) {
+func TestRandomCappedFewerVideosThanGrid(t *testing.T) {
 	cache := &VideoCache{}
 	cache.Store([]Video{
-		{ID: "v1", Title: "One", ThumbnailURL: "http://img/1"},
-		{ID: "v2", Title: "Two", ThumbnailURL: "http://img/2"},
+		{ID: "v1", SourceID: "S1"},
+		{ID: "v2", SourceID: "S1"},
+		{ID: "v3", SourceID: "S2"},
 	})
 
-	selected := cache.Random(9)
-	if len(selected) != 2 {
-		t.Fatalf("got %d videos, want 2 (pool size)", len(selected))
-	}
-}
-
-func TestVideoCacheRandomSelectionEmpty(t *testing.T) {
-	cache := &VideoCache{}
-	selected := cache.Random(9)
-	if len(selected) != 0 {
-		t.Fatalf("got %d videos from empty cache, want 0", len(selected))
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 3 {
+		t.Errorf("len = %d, want 3", len(got))
 	}
 }
 

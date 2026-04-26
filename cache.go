@@ -84,6 +84,9 @@ func (c *VideoCache) RefreshAll(yt *YouTubeClient, sources []Source) error {
 			continue
 		}
 
+		for i := range videos {
+			videos[i].SourceID = src.ID
+		}
 		all = append(all, videos...)
 	}
 

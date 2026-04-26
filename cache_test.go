@@ -131,14 +131,20 @@ func TestVideoCacheRefreshAll(t *testing.T) {
 	}
 
 	cache := &VideoCache{}
-	err := cache.RefreshAll(yt, sources)
-	if err != nil {
+	if err := cache.RefreshAll(yt, sources); err != nil {
 		t.Fatalf("RefreshAll: %v", err)
 	}
 
-	all := cache.Random(100)
-	if len(all) != 2 {
-		t.Fatalf("got %d videos, want 2", len(all))
+	// Each video should be tagged with the ID of the source that produced it.
+	bySource := map[string]string{}
+	for _, v := range cache.videos {
+		bySource[v.ID] = v.SourceID
+	}
+	if got := bySource["cv1"]; got != "UC1" {
+		t.Errorf("cv1 SourceID = %q, want %q", got, "UC1")
+	}
+	if got := bySource["pv1"]; got != "PL1" {
+		t.Errorf("pv1 SourceID = %q, want %q", got, "PL1")
 	}
 }
 

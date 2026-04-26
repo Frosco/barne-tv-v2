@@ -11,6 +11,7 @@ type Video struct {
 	ID           string
 	Title        string
 	ThumbnailURL string
+	SourceID     string
 }
 
 type YouTubeClient struct {

@@ -31,17 +31,52 @@ func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
 		return nil
 	}
 
-	pool := make([]Video, len(c.videos))
-	copy(pool, c.videos)
+	// Group by SourceID and shuffle each group independently.
+	bySource := map[string][]Video{}
+	for _, v := range c.videos {
+		bySource[v.SourceID] = append(bySource[v.SourceID], v)
+	}
+	for src := range bySource {
+		group := bySource[src]
+		rand.Shuffle(len(group), func(i, j int) {
+			group[i], group[j] = group[j], group[i]
+		})
+		bySource[src] = group
+	}
 
-	rand.Shuffle(len(pool), func(i, j int) {
-		pool[i], pool[j] = pool[j], pool[i]
+	// Pass A: take up to capPerSource from each source.
+	var result []Video
+	var leftovers []Video
+	for _, group := range bySource {
+		take := capPerSource
+		if take > len(group) {
+			take = len(group)
+		}
+		result = append(result, group[:take]...)
+		leftovers = append(leftovers, group[take:]...)
+	}
+
+	// Pass B: top up from leftovers if we're under n.
+	if len(result) < n && len(leftovers) > 0 {
+		rand.Shuffle(len(leftovers), func(i, j int) {
+			leftovers[i], leftovers[j] = leftovers[j], leftovers[i]
+		})
+		need := n - len(result)
+		if need > len(leftovers) {
+			need = len(leftovers)
+		}
+		result = append(result, leftovers[:need]...)
+	}
+
+	// Final shuffle so overflow doesn't all sit at the end.
+	rand.Shuffle(len(result), func(i, j int) {
+		result[i], result[j] = result[j], result[i]
 	})
 
-	if n > len(pool) {
-		n = len(pool)
+	if len(result) > n {
+		result = result[:n]
 	}
-	return pool[:n]
+	return result
 }
 
 func (c *VideoCache) GetByIDs(ids []string) []Video {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -152,5 +153,103 @@ func TestStartPeriodicRefresh(t *testing.T) {
 
 	if callCount.Load() < 2 {
 		t.Errorf("expected at least 2 refresh calls, got %d", callCount.Load())
+	}
+}
+
+func TestRandomCappedSingleSource(t *testing.T) {
+	cache := &VideoCache{}
+	videos := make([]Video, 100)
+	for i := range videos {
+		videos[i] = Video{ID: fmt.Sprintf("v%d", i), SourceID: "S1"}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+	for _, v := range got {
+		if v.SourceID != "S1" {
+			t.Errorf("got video with SourceID %q, want S1", v.SourceID)
+		}
+	}
+}
+
+func TestRandomCappedRespectsCap(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for i := 0; i < 100; i++ {
+		videos = append(videos, Video{ID: fmt.Sprintf("a%d", i), SourceID: "A"})
+	}
+	for _, src := range []string{"B", "C", "D", "E"} {
+		for i := 0; i < 10; i++ {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	countA := 0
+	for _, v := range got {
+		if v.SourceID == "A" {
+			countA++
+		}
+	}
+	if countA > 6 {
+		t.Errorf("source A contributed %d videos, want <= 6", countA)
+	}
+}
+
+func TestRandomCappedDistributesAcrossSources(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		for i := 0; i < 20; i++ {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	counts := map[string]int{}
+	for _, v := range got {
+		counts[v.SourceID]++
+	}
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		if counts[src] != 6 {
+			t.Errorf("source %s contributed %d videos, want exactly 6", src, counts[src])
+		}
+	}
+}
+
+func TestRandomCappedRelaxesWhenUnderFilled(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for _, src := range []string{"A", "B"} {
+		for i := 0; i < 50; i++ {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	got := cache.RandomCapped(30, 6)
+	if len(got) != 30 {
+		t.Fatalf("len = %d, want 30", len(got))
+	}
+
+	counts := map[string]int{}
+	for _, v := range got {
+		counts[v.SourceID]++
+	}
+	if counts["A"] <= 6 && counts["B"] <= 6 {
+		t.Errorf("both sources at or under cap (A=%d, B=%d); expected at least one to exceed cap because grid couldn't fill at cap=6 with 2 sources", counts["A"], counts["B"])
 	}
 }

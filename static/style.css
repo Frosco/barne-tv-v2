@@ -90,6 +90,18 @@ body {
 .grid-cell:nth-child(16) { --accent: #F472B6; animation-delay: 0.75s; }
 .grid-cell:nth-child(17) { --accent: #38BDF8; animation-delay: 0.8s; }
 .grid-cell:nth-child(18) { --accent: #BEF264; animation-delay: 0.85s; }
+.grid-cell:nth-child(19) { --accent: #FCA5A5; animation-delay: 0.9s; }
+.grid-cell:nth-child(20) { --accent: #5EEAD4; animation-delay: 0.95s; }
+.grid-cell:nth-child(21) { --accent: #FCD34D; animation-delay: 1.0s; }
+.grid-cell:nth-child(22) { --accent: #DDD6FE; animation-delay: 1.05s; }
+.grid-cell:nth-child(23) { --accent: #86EFAC; animation-delay: 1.1s; }
+.grid-cell:nth-child(24) { --accent: #FDBA74; animation-delay: 1.15s; }
+.grid-cell:nth-child(25) { --accent: #FBCFE8; animation-delay: 1.2s; }
+.grid-cell:nth-child(26) { --accent: #7DD3FC; animation-delay: 1.25s; }
+.grid-cell:nth-child(27) { --accent: #BBF7D0; animation-delay: 1.3s; }
+.grid-cell:nth-child(28) { --accent: #FED7AA; animation-delay: 1.35s; }
+.grid-cell:nth-child(29) { --accent: #E9D5FF; animation-delay: 1.4s; }
+.grid-cell:nth-child(30) { --accent: #FEF08A; animation-delay: 1.45s; }
 
 .grid-cell img {
     width: 100%;

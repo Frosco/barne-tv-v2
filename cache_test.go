@@ -178,11 +178,11 @@ func TestRandomCappedSingleSource(t *testing.T) {
 func TestRandomCappedRespectsCap(t *testing.T) {
 	cache := &VideoCache{}
 	var videos []Video
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		videos = append(videos, Video{ID: fmt.Sprintf("a%d", i), SourceID: "A"})
 	}
 	for _, src := range []string{"B", "C", "D", "E"} {
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
 		}
 	}
@@ -208,7 +208,7 @@ func TestRandomCappedDistributesAcrossSources(t *testing.T) {
 	cache := &VideoCache{}
 	var videos []Video
 	for _, src := range []string{"A", "B", "C", "D", "E"} {
-		for i := 0; i < 20; i++ {
+		for i := range 20 {
 			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
 		}
 	}
@@ -234,7 +234,7 @@ func TestRandomCappedRelaxesWhenUnderFilled(t *testing.T) {
 	cache := &VideoCache{}
 	var videos []Video
 	for _, src := range []string{"A", "B"} {
-		for i := 0; i < 50; i++ {
+		for i := range 50 {
 			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
 		}
 	}

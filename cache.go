@@ -48,10 +48,7 @@ func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
 	var result []Video
 	var leftovers []Video
 	for _, group := range bySource {
-		take := capPerSource
-		if take > len(group) {
-			take = len(group)
-		}
+		take := min(capPerSource, len(group))
 		result = append(result, group[:take]...)
 		leftovers = append(leftovers, group[take:]...)
 	}
@@ -61,10 +58,7 @@ func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
 		rand.Shuffle(len(leftovers), func(i, j int) {
 			leftovers[i], leftovers[j] = leftovers[j], leftovers[i]
 		})
-		need := n - len(result)
-		if need > len(leftovers) {
-			need = len(leftovers)
-		}
+		need := min(n-len(result), len(leftovers))
 		result = append(result, leftovers[:need]...)
 	}
 

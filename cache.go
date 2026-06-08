@@ -64,6 +64,37 @@ func FairOrder(videos []Video, rng *rand.Rand) []Video {
 	return result
 }
 
+// Page returns count videos starting at the global feed offset, looping over
+// the pool with a freshly reshuffled FairOrder each cycle. The browser only
+// tracks a growing offset; cycle/wrap math lives here. Returns nil if the pool
+// is empty; otherwise always returns exactly count videos.
+func (c *VideoCache) Page(seed uint64, offset, count int) []Video {
+	c.mu.RLock()
+	m := len(c.videos)
+	videos := make([]Video, m)
+	copy(videos, c.videos)
+	c.mu.RUnlock()
+
+	if m == 0 {
+		return nil
+	}
+
+	result := make([]Video, 0, count)
+	curCycle := -1
+	var ordering []Video
+	for i := range count {
+		g := offset + i
+		cycle := g / m
+		local := g % m
+		if cycle != curCycle {
+			ordering = FairOrder(videos, rand.New(rand.NewPCG(seed, uint64(cycle))))
+			curCycle = cycle
+		}
+		result = append(result, ordering[local])
+	}
+	return result
+}
+
 // RandomCapped returns up to n videos from the cache, with no single source
 // contributing more than capPerSource videos when avoidable. If the cap leaves
 // the result smaller than n, it relaxes per-source limits and tops up from

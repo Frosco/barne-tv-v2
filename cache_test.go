@@ -336,6 +336,89 @@ func TestFairOrderDistinctAcrossCycles(t *testing.T) {
 	}
 }
 
+func TestPageEmpty(t *testing.T) {
+	cache := &VideoCache{}
+	if got := cache.Page(1, 0, 30); got != nil {
+		t.Errorf("Page on empty cache = %+v, want nil", got)
+	}
+}
+
+func TestPageReturnsCount(t *testing.T) {
+	cache := &VideoCache{}
+	var videos []Video
+	for _, src := range []string{"A", "B", "C"} {
+		for i := range 20 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cache.Store(videos)
+
+	if got := cache.Page(1, 0, 30); len(got) != 30 {
+		t.Errorf("len = %d, want 30", len(got))
+	}
+}
+
+func TestPageConsecutiveOffsetsAreDisjoint(t *testing.T) {
+	cache := &VideoCache{}
+	videos := make([]Video, 100)
+	for i := range videos {
+		videos[i] = Video{ID: fmt.Sprintf("v%d", i), SourceID: "S1"}
+	}
+	cache.Store(videos)
+
+	// Within one cycle (pool size 100), offsets 0..29 and 30..59 must not overlap.
+	p1 := cache.Page(9, 0, 30)
+	p2 := cache.Page(9, 30, 30)
+
+	seen := map[string]bool{}
+	for _, v := range p1 {
+		seen[v.ID] = true
+	}
+	for _, v := range p2 {
+		if seen[v.ID] {
+			t.Errorf("video %q appeared in both consecutive pages within a cycle", v.ID)
+		}
+	}
+}
+
+func TestPageLoopsWithFreshOrder(t *testing.T) {
+	cache := &VideoCache{}
+	videos := make([]Video, 10)
+	for i := range videos {
+		videos[i] = Video{ID: fmt.Sprintf("v%d", i), SourceID: "S1"}
+	}
+	cache.Store(videos)
+
+	cycle0 := cache.Page(5, 0, 10)  // local 0..9 of cycle 0
+	cycle1 := cache.Page(5, 10, 10) // local 0..9 of cycle 1
+
+	if len(cycle0) != 10 || len(cycle1) != 10 {
+		t.Fatalf("lengths = %d, %d, want 10, 10", len(cycle0), len(cycle1))
+	}
+	identical := true
+	for i := range cycle0 {
+		if cycle0[i].ID != cycle1[i].ID {
+			identical = false
+			break
+		}
+	}
+	if identical {
+		t.Error("cycle 1 identical to cycle 0; loops should reshuffle")
+	}
+}
+
+func TestPageFillsShortPoolByLooping(t *testing.T) {
+	cache := &VideoCache{}
+	cache.Store([]Video{
+		{ID: "v1", SourceID: "S1"},
+		{ID: "v2", SourceID: "S1"},
+		{ID: "v3", SourceID: "S2"},
+	})
+	if got := cache.Page(1, 0, 30); len(got) != 30 {
+		t.Errorf("len = %d, want 30 (short pool loops to fill count)", len(got))
+	}
+}
+
 func TestFairOrderPrefixDiversity(t *testing.T) {
 	// One dominant source (A=100) and four small ones (10 each).
 	var videos []Video

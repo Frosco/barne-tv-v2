@@ -147,8 +147,11 @@ asking for higher offsets.
   empty; there is nothing to scroll. Matches today's empty-cache blank grid.
 - **Single source** — round-robin degenerates to that source shuffled, then
   reshuffled each loop. Acceptable.
-- **Pool smaller than `count`** — the first page is the entire pool; scrolling
-  loops almost immediately.
+- **Pool smaller than `count`** — `Page` still returns a full `count` by looping
+  (each cycle reshuffled), so the first screen fills with the few videos repeated
+  in fresh order. Unlikely given expected pool sizes (hundreds–2000), but the
+  uniform "always returns `count`" contract keeps the code simple. The empty
+  pool is the only case that returns fewer (zero).
 - **Pool changes mid-session** — the periodic refresh (every few hours) replaces
   the cache, changing `M` and therefore the seed→order mapping. A page fetched
   right at that boundary could duplicate or skip a video once. Rare and

@@ -12,7 +12,6 @@
     --bg-warm: #FFF8F0;
     --cell-bg: #FFFFFF;
     --title-color: #3D2C22;
-    --shuffle-bg: #FF8C42;
     --font: 'Fredoka', sans-serif;
     --radius: 20px;
     --grid-gap: 20px;
@@ -60,6 +59,8 @@ body {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
     border-bottom: 5px solid var(--accent, #FF8C42);
     animation: popIn 0.4s ease-out backwards;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 210px;
 }
 
 .grid-cell:hover {
@@ -71,37 +72,18 @@ body {
     transform: scale(0.97);
 }
 
-/* Accent colors and staggered entrance per cell */
-.grid-cell:nth-child(1) { --accent: #FF6B6B; animation-delay: 0s; }
-.grid-cell:nth-child(2) { --accent: #4ECDC4; animation-delay: 0.05s; }
-.grid-cell:nth-child(3) { --accent: #FFD93D; animation-delay: 0.1s; }
-.grid-cell:nth-child(4) { --accent: #A78BFA; animation-delay: 0.15s; }
-.grid-cell:nth-child(5) { --accent: #6BCB77; animation-delay: 0.2s; }
-.grid-cell:nth-child(6) { --accent: #FFB347; animation-delay: 0.25s; }
-.grid-cell:nth-child(7) { --accent: #FF85A1; animation-delay: 0.3s; }
-.grid-cell:nth-child(8) { --accent: #45B7D1; animation-delay: 0.35s; }
-.grid-cell:nth-child(9)  { --accent: #96E6A1; animation-delay: 0.4s; }
-.grid-cell:nth-child(10) { --accent: #F9A8D4; animation-delay: 0.45s; }
-.grid-cell:nth-child(11) { --accent: #67E8F9; animation-delay: 0.5s; }
-.grid-cell:nth-child(12) { --accent: #FDE68A; animation-delay: 0.55s; }
-.grid-cell:nth-child(13) { --accent: #C084FC; animation-delay: 0.6s; }
-.grid-cell:nth-child(14) { --accent: #34D399; animation-delay: 0.65s; }
-.grid-cell:nth-child(15) { --accent: #FB923C; animation-delay: 0.7s; }
-.grid-cell:nth-child(16) { --accent: #F472B6; animation-delay: 0.75s; }
-.grid-cell:nth-child(17) { --accent: #38BDF8; animation-delay: 0.8s; }
-.grid-cell:nth-child(18) { --accent: #BEF264; animation-delay: 0.85s; }
-.grid-cell:nth-child(19) { --accent: #FCA5A5; animation-delay: 0.9s; }
-.grid-cell:nth-child(20) { --accent: #5EEAD4; animation-delay: 0.95s; }
-.grid-cell:nth-child(21) { --accent: #FCD34D; animation-delay: 1.0s; }
-.grid-cell:nth-child(22) { --accent: #DDD6FE; animation-delay: 1.05s; }
-.grid-cell:nth-child(23) { --accent: #86EFAC; animation-delay: 1.1s; }
-.grid-cell:nth-child(24) { --accent: #FDBA74; animation-delay: 1.15s; }
-.grid-cell:nth-child(25) { --accent: #FBCFE8; animation-delay: 1.2s; }
-.grid-cell:nth-child(26) { --accent: #7DD3FC; animation-delay: 1.25s; }
-.grid-cell:nth-child(27) { --accent: #BBF7D0; animation-delay: 1.3s; }
-.grid-cell:nth-child(28) { --accent: #FED7AA; animation-delay: 1.35s; }
-.grid-cell:nth-child(29) { --accent: #E9D5FF; animation-delay: 1.4s; }
-.grid-cell:nth-child(30) { --accent: #FEF08A; animation-delay: 1.45s; }
+/* Accent colors and entrance stagger repeat every 10 cells, so appended
+   tiles past the first screenful stay styled and the stagger stays bounded. */
+.grid-cell:nth-child(10n+1) { --accent: #FF6B6B; animation-delay: 0s; }
+.grid-cell:nth-child(10n+2) { --accent: #4ECDC4; animation-delay: 0.04s; }
+.grid-cell:nth-child(10n+3) { --accent: #FFD93D; animation-delay: 0.08s; }
+.grid-cell:nth-child(10n+4) { --accent: #A78BFA; animation-delay: 0.12s; }
+.grid-cell:nth-child(10n+5) { --accent: #6BCB77; animation-delay: 0.16s; }
+.grid-cell:nth-child(10n+6) { --accent: #FFB347; animation-delay: 0.20s; }
+.grid-cell:nth-child(10n+7) { --accent: #FF85A1; animation-delay: 0.24s; }
+.grid-cell:nth-child(10n+8) { --accent: #45B7D1; animation-delay: 0.28s; }
+.grid-cell:nth-child(10n+9) { --accent: #96E6A1; animation-delay: 0.32s; }
+.grid-cell:nth-child(10n)   { --accent: #F9A8D4; animation-delay: 0.36s; }
 
 .grid-cell img {
     width: 100%;
@@ -119,38 +101,6 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.3;
-}
-
-/* === Shuffle Button === */
-
-.shuffle-btn {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    border: none;
-    background: var(--shuffle-bg);
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 4px 16px rgba(255, 140, 66, 0.4);
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: bob 3s ease-in-out infinite;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.shuffle-btn:hover {
-    animation: none;
-    transform: scale(1.1) rotate(15deg);
-    box-shadow: 0 6px 24px rgba(255, 140, 66, 0.5);
-}
-
-.shuffle-btn:active {
-    transform: scale(0.95);
 }
 
 /* === Player === */
@@ -186,11 +136,6 @@ body {
     }
 }
 
-@keyframes bob {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-}
-
 /* === Responsive: phones === */
 
 @media (max-width: 600px) {
@@ -211,18 +156,6 @@ body {
         font-size: 0.78rem;
         padding: 8px 10px;
     }
-
-    .shuffle-btn {
-        width: 52px;
-        height: 52px;
-        bottom: 16px;
-        right: 16px;
-    }
-
-    .shuffle-btn svg {
-        width: 24px;
-        height: 24px;
-    }
 }
 
 /* === Responsive: TVs and large screens === */
@@ -240,17 +173,5 @@ body {
     .grid-cell .title {
         font-size: 1.1rem;
         padding: 14px 18px;
-    }
-
-    .shuffle-btn {
-        width: 80px;
-        height: 80px;
-        bottom: 40px;
-        right: 40px;
-    }
-
-    .shuffle-btn svg {
-        width: 40px;
-        height: 40px;
     }
 }

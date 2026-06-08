@@ -95,60 +95,6 @@ func (c *VideoCache) Page(seed uint64, offset, count int) []Video {
 	return result
 }
 
-// RandomCapped returns up to n videos from the cache, with no single source
-// contributing more than capPerSource videos when avoidable. If the cap leaves
-// the result smaller than n, it relaxes per-source limits and tops up from
-// leftover videos until the result is full or the cache is exhausted.
-func (c *VideoCache) RandomCapped(n, capPerSource int) []Video {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	if len(c.videos) == 0 {
-		return nil
-	}
-
-	// Group by SourceID and shuffle each group independently.
-	bySource := map[string][]Video{}
-	for _, v := range c.videos {
-		bySource[v.SourceID] = append(bySource[v.SourceID], v)
-	}
-	for src := range bySource {
-		group := bySource[src]
-		rand.Shuffle(len(group), func(i, j int) {
-			group[i], group[j] = group[j], group[i]
-		})
-		bySource[src] = group
-	}
-
-	// Pass A: take up to capPerSource from each source.
-	var result []Video
-	var leftovers []Video
-	for _, group := range bySource {
-		take := min(capPerSource, len(group))
-		result = append(result, group[:take]...)
-		leftovers = append(leftovers, group[take:]...)
-	}
-
-	// Pass B: top up from leftovers if we're under n.
-	if len(result) < n && len(leftovers) > 0 {
-		rand.Shuffle(len(leftovers), func(i, j int) {
-			leftovers[i], leftovers[j] = leftovers[j], leftovers[i]
-		})
-		need := min(n-len(result), len(leftovers))
-		result = append(result, leftovers[:need]...)
-	}
-
-	// Final shuffle so overflow doesn't all sit at the end.
-	rand.Shuffle(len(result), func(i, j int) {
-		result[i], result[j] = result[j], result[i]
-	})
-
-	if len(result) > n {
-		result = result[:n]
-	}
-	return result
-}
-
 func (c *VideoCache) GetByIDs(ids []string) []Video {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

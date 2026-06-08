@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"sort"
 	"sync"
 	"time"
 )
@@ -17,6 +18,50 @@ func (c *VideoCache) Store(videos []Video) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.videos = videos
+}
+
+// FairOrder returns every video in a single ordering whose every prefix is
+// spread across sources as evenly as the pool allows. Sources are visited
+// round-robin (in a seed-shuffled order, each source's videos seed-shuffled),
+// so no early screenful is dominated by one source; a dominant source's
+// overflow necessarily trails at the end. Deterministic for a given rng.
+func FairOrder(videos []Video, rng *rand.Rand) []Video {
+	if len(videos) == 0 {
+		return nil
+	}
+
+	bySource := map[string][]Video{}
+	for _, v := range videos {
+		bySource[v.SourceID] = append(bySource[v.SourceID], v)
+	}
+
+	// Deterministic source order: sort keys (map iteration is random), then
+	// shuffle that order with the seeded rng.
+	keys := make([]string, 0, len(bySource))
+	for k := range bySource {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	rng.Shuffle(len(keys), func(i, j int) { keys[i], keys[j] = keys[j], keys[i] })
+
+	for _, k := range keys {
+		group := bySource[k]
+		rng.Shuffle(len(group), func(i, j int) { group[i], group[j] = group[j], group[i] })
+	}
+
+	result := make([]Video, 0, len(videos))
+	idx := make(map[string]int, len(keys))
+	for remaining := len(videos); remaining > 0; {
+		for _, k := range keys {
+			group := bySource[k]
+			if idx[k] < len(group) {
+				result = append(result, group[idx[k]])
+				idx[k]++
+				remaining--
+			}
+		}
+	}
+	return result
 }
 
 // RandomCapped returns up to n videos from the cache, with no single source

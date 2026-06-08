@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -251,5 +252,111 @@ func TestRandomCappedRelaxesWhenUnderFilled(t *testing.T) {
 	}
 	if counts["A"] <= 6 && counts["B"] <= 6 {
 		t.Errorf("both sources at or under cap (A=%d, B=%d); expected at least one to exceed cap because grid couldn't fill at cap=6 with 2 sources", counts["A"], counts["B"])
+	}
+}
+
+func TestFairOrderEmpty(t *testing.T) {
+	rng := rand.New(rand.NewPCG(1, 0))
+	if got := FairOrder(nil, rng); got != nil {
+		t.Errorf("FairOrder(nil) = %+v, want nil", got)
+	}
+	if got := FairOrder([]Video{}, rng); len(got) != 0 {
+		t.Errorf("FairOrder(empty) len = %d, want 0", len(got))
+	}
+}
+
+func TestFairOrderIsPermutation(t *testing.T) {
+	videos := make([]Video, 100)
+	for i := range videos {
+		videos[i] = Video{ID: fmt.Sprintf("v%d", i), SourceID: "S1"}
+	}
+	got := FairOrder(videos, rand.New(rand.NewPCG(7, 0)))
+
+	if len(got) != 100 {
+		t.Fatalf("len = %d, want 100", len(got))
+	}
+	seen := map[string]bool{}
+	for _, v := range got {
+		if seen[v.ID] {
+			t.Fatalf("duplicate ID %q", v.ID)
+		}
+		seen[v.ID] = true
+	}
+	// Single source must be shuffled, not returned in input order.
+	identical := true
+	for i := range got {
+		if got[i].ID != videos[i].ID {
+			identical = false
+			break
+		}
+	}
+	if identical {
+		t.Error("FairOrder returned single source in input order; expected a shuffle")
+	}
+}
+
+func TestFairOrderDeterministic(t *testing.T) {
+	videos := []Video{
+		{ID: "a1", SourceID: "A"}, {ID: "a2", SourceID: "A"},
+		{ID: "b1", SourceID: "B"}, {ID: "b2", SourceID: "B"},
+		{ID: "c1", SourceID: "C"},
+	}
+	first := FairOrder(videos, rand.New(rand.NewPCG(42, 0)))
+	second := FairOrder(videos, rand.New(rand.NewPCG(42, 0)))
+
+	if len(first) != len(second) {
+		t.Fatalf("lengths differ: %d vs %d", len(first), len(second))
+	}
+	for i := range first {
+		if first[i].ID != second[i].ID {
+			t.Errorf("position %d differs: %q vs %q (same seed must be deterministic)", i, first[i].ID, second[i].ID)
+		}
+	}
+}
+
+func TestFairOrderDistinctAcrossCycles(t *testing.T) {
+	videos := make([]Video, 0, 140)
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		for i := range 28 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	cycle0 := FairOrder(videos, rand.New(rand.NewPCG(42, 0)))
+	cycle1 := FairOrder(videos, rand.New(rand.NewPCG(42, 1)))
+
+	identical := true
+	for i := range cycle0 {
+		if cycle0[i].ID != cycle1[i].ID {
+			identical = false
+			break
+		}
+	}
+	if identical {
+		t.Error("different cycle seeds produced identical order; loops would repeat")
+	}
+}
+
+func TestFairOrderPrefixDiversity(t *testing.T) {
+	// One dominant source (A=100) and four small ones (10 each).
+	var videos []Video
+	for i := range 100 {
+		videos = append(videos, Video{ID: fmt.Sprintf("a%d", i), SourceID: "A"})
+	}
+	for _, src := range []string{"B", "C", "D", "E"} {
+		for i := range 10 {
+			videos = append(videos, Video{ID: fmt.Sprintf("%s%d", src, i), SourceID: src})
+		}
+	}
+	got := FairOrder(videos, rand.New(rand.NewPCG(3, 0)))
+
+	// First 25 = 5 full round-robin rounds over 5 sources => exactly 5 each.
+	counts := map[string]int{}
+	for _, v := range got[:25] {
+		counts[v.SourceID]++
+	}
+	for _, src := range []string{"A", "B", "C", "D", "E"} {
+		if counts[src] != 5 {
+			t.Errorf("source %s contributed %d of first 25, want exactly 5 (round-robin)", src, counts[src])
+		}
 	}
 }

@@ -32,14 +32,18 @@ func main() {
 	stop := cache.StartPeriodicRefresh(yt, cfg.Sources, interval)
 	defer stop()
 
-	tmpl, err := template.ParseFiles("templates/index.html")
+	tmpl, err := template.ParseFiles("templates/index.html", "templates/cells.html")
 	if err != nil {
-		log.Fatalf("parsing template: %v", err)
+		log.Fatalf("parsing templates: %v", err)
 	}
 
-	handler := &GridHandler{Cache: cache, Template: tmpl, GridSize: 30}
+	const pageSize = 30
+	grid := &GridHandler{Cache: cache, Template: tmpl, PageSize: pageSize}
+	// MaxCount caps the work per request; clients may fetch up to two pages in one call.
+	videos := &VideosHandler{Cache: cache, Template: tmpl, PageSize: pageSize, MaxCount: 60}
 
-	http.Handle("/", handler)
+	http.Handle("/", grid)
+	http.Handle("/videos", videos)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	log.Printf("listening on %s with %d sources", *addr, len(cfg.Sources))

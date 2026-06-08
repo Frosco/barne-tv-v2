@@ -1,0 +1,5 @@
+{{define "cells"}}{{range .}}<div class="grid-cell" data-video-id="{{.ID}}">
+    <img src="{{.ThumbnailURL}}" alt="{{.Title}}" loading="lazy">
+    <span class="title">{{.Title}}</span>
+</div>
+{{end}}{{end}}

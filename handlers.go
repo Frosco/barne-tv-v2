@@ -1,54 +1,86 @@
 package main
 
 import (
+	"bytes"
 	"html/template"
+	"math/rand/v2"
 	"net/http"
-	"strings"
+	"strconv"
 )
 
+// GridHandler renders the front page: a fresh fair ordering seeded per request,
+// with the first screenful server-rendered and the seed + next offset embedded
+// for the client's infinite scroll.
 type GridHandler struct {
 	Cache    *VideoCache
 	Template *template.Template
-	GridSize int
+	PageSize int
 }
 
-type templateData struct {
-	Videos []Video
+type indexData struct {
+	Videos     []Video
+	Seed       uint64
+	NextOffset int
 }
 
 func (h *GridHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	shuffle := r.URL.Query().Get("shuffle") != ""
+	seed := rand.Uint64()
+	videos := h.Cache.Page(seed, 0, h.PageSize)
 
-	var videos []Video
-
-	if !shuffle {
-		if cookie, err := r.Cookie("grid"); err == nil {
-			ids := strings.Split(cookie.Value, ",")
-			videos = h.Cache.GetByIDs(ids)
-		}
+	data := indexData{
+		Videos:     videos,
+		Seed:       seed,
+		NextOffset: len(videos),
 	}
-
-	if videos == nil {
-		videos = h.Cache.RandomCapped(h.GridSize, max(1, h.GridSize/5))
-	}
-
-	// Set cookie with current selection
-	if len(videos) > 0 {
-		ids := make([]string, len(videos))
-		for i, v := range videos {
-			ids[i] = v.ID
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     "grid",
-			Value:    strings.Join(ids, ","),
-			Path:     "/",
-			SameSite: http.SameSiteLaxMode,
-		})
-	}
-
-	data := templateData{Videos: videos}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.Template.Execute(w, data); err != nil {
+	var buf bytes.Buffer
+	if err := h.Template.Execute(&buf, data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
+}
+
+// VideosHandler serves successive screenfuls as an HTML fragment of grid cells,
+// identified by (seed, offset). It re-derives the same fair ordering from the
+// seed and slices it, looping past the end of the pool.
+type VideosHandler struct {
+	Cache    *VideoCache
+	Template *template.Template
+	PageSize int
+	MaxCount int
+}
+
+func (h *VideosHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	seed, err := strconv.ParseUint(q.Get("seed"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid seed", http.StatusBadRequest)
+		return
+	}
+
+	offset, err := strconv.Atoi(q.Get("offset"))
+	if err != nil || offset < 0 {
+		http.Error(w, "invalid offset", http.StatusBadRequest)
+		return
+	}
+
+	count := h.PageSize
+	if raw := q.Get("count"); raw != "" {
+		count, err = strconv.Atoi(raw)
+		if err != nil || count < 1 || count > h.MaxCount {
+			http.Error(w, "invalid count", http.StatusBadRequest)
+			return
+		}
+	}
+
+	videos := h.Cache.Page(seed, offset, count)
+	var buf bytes.Buffer
+	if err := h.Template.ExecuteTemplate(&buf, "cells", videos); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
 }

@@ -1,6 +1,6 @@
 # Barne-TV v2
 
-A kid-friendly video wall that shows a shuffled grid of YouTube thumbnails. Click a thumbnail to watch it fullscreen with the YouTube IFrame player. Videos are fetched from configured YouTube channels and playlists, cached in memory, and refreshed periodically.
+A kid-friendly video wall: an endless, looping feed of YouTube thumbnails you scroll through, never running out. Click a thumbnail to watch it fullscreen with the YouTube IFrame player. Videos are fetched from configured YouTube channels and playlists, cached in memory, and refreshed periodically.
 
 Live at [refsnes-barnetv.no](https://refsnes-barnetv.no).
 
@@ -34,10 +34,10 @@ Single Go binary, no database. Everything runs in one process:
 
 - **youtube.go** - YouTube Data API v3 client (channels + playlists, paginated)
 - **cache.go** - Thread-safe in-memory video cache with periodic refresh
-- **handlers.go** - HTTP handler serving a shuffled 3x3 grid, persisted in a cookie
+- **handlers.go** - `GridHandler` renders the first screenful with a random per-load seed embedded; `VideosHandler` serves successive screenfuls from `/videos?seed=&offset=&count=` as HTML fragments, looping the pool in a fresh fair order each cycle
 - **main.go** - Wires config, cache, and HTTP together
-- **templates/** - Go HTML template for the video grid page
-- **static/** - CSS and JS (YouTube IFrame API integration, fullscreen playback)
+- **templates/** - Go HTML templates: `index.html` page shell plus the shared `cells.html` tile fragment
+- **static/** - CSS and JS (infinite-scroll fetch/append/DOM-pruning, YouTube IFrame API integration, fullscreen playback)
 
 ## Deployment
 

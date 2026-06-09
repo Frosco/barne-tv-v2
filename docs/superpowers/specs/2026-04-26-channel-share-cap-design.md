@@ -1,5 +1,13 @@
 # Channel-Share Cap on the Video Grid
 
+> **Superseded (2026-06-08).** `RandomCapped` — the bounded *sample* this spec
+> introduced — was generalized into `FairOrder`, a prefix-fair whole-pool
+> *ordering*, when the front page became an infinite-scroll feed. Per-screenful
+> source diversity is preserved (and tightened to round-robin), but the cap on a
+> single 30-tile draw no longer applies: pagination needs a deterministic
+> ordering whose every prefix is fair, not a one-shot fair sample. See
+> `docs/superpowers/specs/2026-06-08-infinite-scroll-design.md`.
+
 ## Problem
 
 The video cache pools all videos from all configured sources into a single

@@ -23,6 +23,9 @@ html, body {
     color: var(--title-color);
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
+    /* pruneTop() compensates the scroll position for removed rows itself;
+       native scroll anchoring would correct a second time and jump the view. */
+    overflow-anchor: none;
 }
 
 body {

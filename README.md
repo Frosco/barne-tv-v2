@@ -55,6 +55,18 @@ For fresh server setup, see [`deploy/setup-server.sh`](deploy/setup-server.sh).
 go test -race ./...
 ```
 
+### Manual frontend verification
+
+The JS (infinite scroll, DOM pruning, playback) has no automated tests. To
+exercise it in a browser without a YouTube API key, a build-tagged harness
+([`repro_harness_test.go`](repro_harness_test.go)) serves the real handlers,
+templates, and static assets with synthetic videos:
+
+```bash
+go test -tags repro -run TestReproHarness -timeout 0
+# open http://127.0.0.1:8431
+```
+
 ## License
 
 MIT - see [LICENSE](LICENSE).

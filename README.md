@@ -47,6 +47,19 @@ Deployed as a bare binary on a Hetzner VPS behind Caddy (auto-HTTPS).
 ./deploy.sh   # cross-compiles, uploads, restarts service
 ```
 
+`deploy.sh` syncs the binary, templates, and static assets, but **not**
+`config.yaml` (it's gitignored and holds the API key). When sources or other
+config change, push it separately. The config is read only at startup, so the
+service must be restarted to pick up changes:
+
+```bash
+scp config.yaml root@refsnes-barnetv.no:/opt/barne-tv/config.yaml
+ssh root@refsnes-barnetv.no "chown barnetv:barnetv /opt/barne-tv/config.yaml && systemctl restart barne-tv"
+```
+
+The `chown` is needed because `scp` as `root` leaves the file root-owned, while
+the service runs as `barnetv`.
+
 For fresh server setup, see [`deploy/setup-server.sh`](deploy/setup-server.sh).
 
 ## Tests

@@ -149,9 +149,25 @@
         }, 1500);
     }
 
+    // Switching apps on Android drops element-fullscreen, but Chrome doesn't
+    // deliver the fullscreenchange until the page returns to the foreground --
+    // by then document.hidden is already false, so visibility at event time
+    // can't tell a backgrounding-induced exit from a real one. Instead track
+    // whether we were backgrounded while a video was playing; the first
+    // fullscreen exit after that is the browser, not the user, so keep playing.
+    // Only a fullscreen exit during uninterrupted foreground viewing is a
+    // deliberate Back/Escape that should return to the grid.
+    var wasBackgrounded = false;
+    document.addEventListener("visibilitychange", function () {
+        if (document.hidden && player) wasBackgrounded = true;
+    });
+
     document.addEventListener("fullscreenchange", function () {
-        if (!document.fullscreenElement && player) {
-            returnToGrid();
+        if (document.fullscreenElement || !player) return;
+        if (wasBackgrounded || document.hidden) {
+            wasBackgrounded = false;
+            return;
         }
+        returnToGrid();
     });
 })();

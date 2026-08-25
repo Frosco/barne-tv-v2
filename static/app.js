@@ -58,7 +58,13 @@
                   "&offset=" + nextOffset + "&count=" + PAGE_SIZE;
 
         fetch(url)
-            .then(function (resp) { return resp.text(); })
+            // fetch only rejects on network failure, so a 4xx/5xx would other-
+            // wise flow on as content: its body appended to the grid and the
+            // next page requested at once, hammering the server in a tight loop.
+            .then(function (resp) {
+                if (!resp.ok) throw new Error("videos request failed: " + resp.status);
+                return resp.text();
+            })
             .then(function (html) {
                 if (html.trim() === "") {
                     exhausted = true; // only happens when the pool is empty

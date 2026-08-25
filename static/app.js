@@ -117,9 +117,25 @@
 
         player = new YT.Player("player", {
             videoId: videoId,
-            playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
+            playerVars: { autoplay: 1, rel: 0, controls: 0 },
             events: { onStateChange: onPlayerStateChange },
         });
+
+        // Creator end-screen cards live inside the player iframe, out of reach
+        // of any page CSS or script. A shield over the iframe swallows every
+        // tap so a card can never be followed, and drives playback itself so a
+        // tap anywhere still pauses and resumes.
+        var shield = document.createElement("div");
+        shield.id = "click-shield";
+        shield.addEventListener("click", function () {
+            if (!player) return;
+            if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
+            }
+        });
+        playerContainer.appendChild(shield);
 
         playerContainer.requestFullscreen().catch(function () {
             // Fullscreen may be blocked by browser; video still plays

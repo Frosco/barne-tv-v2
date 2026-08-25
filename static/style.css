@@ -126,6 +126,13 @@ body {
     border: none;
 }
 
+/* Covers the player iframe so taps can't reach YouTube's end-screen cards. */
+#click-shield {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
 /* === Animations === */
 
 @keyframes popIn {

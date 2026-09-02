@@ -127,19 +127,32 @@
         // tap anywhere still pauses and resumes.
         var shield = document.createElement("div");
         shield.id = "click-shield";
-        shield.addEventListener("click", function () {
-            if (!player) return;
-            if (player.getPlayerState() === YT.PlayerState.PLAYING) {
-                player.pauseVideo();
-            } else {
-                player.playVideo();
-            }
-        });
+        shield.addEventListener("click", togglePlayback);
         playerContainer.appendChild(shield);
 
         playerContainer.requestFullscreen().catch(function () {
             // Fullscreen may be blocked by browser; video still plays
         });
+    });
+
+    // Tap and the space key share this. getPlayerState only exists once the
+    // player is ready, and an early key press can land before then.
+    function togglePlayback() {
+        if (!player || typeof player.getPlayerState !== "function") return;
+        if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+            player.pauseVideo();
+        } else {
+            player.playVideo();
+        }
+    }
+
+    // A laptop has no shield to tap, so space drives playback there. Only
+    // intercept while a video is up, leaving space to scroll the grid, and
+    // ignore auto-repeat so holding it down doesn't strobe play/pause.
+    document.addEventListener("keydown", function (e) {
+        if (!player || e.code !== "Space" || e.repeat) return;
+        e.preventDefault();
+        togglePlayback();
     });
 
     function onPlayerStateChange(event) {

@@ -3,6 +3,8 @@
 
     var ytReady = false;
     var player = null;
+    var timeLeft = null;
+    var timeLeftTimer = null;
     var playerContainer = document.getElementById("player-container");
     var grid = document.querySelector(".grid");
     var sentinel = document.getElementById("scroll-sentinel");
@@ -130,10 +132,50 @@
         shield.addEventListener("click", togglePlayback);
         playerContainer.appendChild(shield);
 
+        // A dim countdown so a parent glancing over can see how long is
+        // left before the natural break. It sits above the shield, so CSS
+        // keeps pointer-events off it and a tap there still reaches the
+        // shield below.
+        timeLeft = document.createElement("div");
+        timeLeft.id = "time-left";
+        playerContainer.appendChild(timeLeft);
+        updateTimeLeft();
+        timeLeftTimer = setInterval(updateTimeLeft, 1000);
+
         playerContainer.requestFullscreen().catch(function () {
             // Fullscreen may be blocked by browser; video still plays
         });
     });
+
+    // getDuration reads 0 until metadata arrives, and stays 0 for a live
+    // stream. Neither has a remaining time to show, so the corner stays
+    // empty rather than counting down from a wrong number.
+    function updateTimeLeft() {
+        if (!player || typeof player.getDuration !== "function") return;
+
+        var duration = player.getDuration();
+        if (!duration) {
+            timeLeft.textContent = "";
+            return;
+        }
+        var remaining = Math.max(0, Math.ceil(duration - player.getCurrentTime()));
+        timeLeft.textContent = formatDuration(remaining);
+    }
+
+    // m:ss, growing to h:mm:ss past the hour. Seconds are rounded up by the
+    // caller so the readout never sits at 0:00 while the video runs on.
+    function formatDuration(seconds) {
+        function pad(n) {
+            return n < 10 ? "0" + n : String(n);
+        }
+
+        var hours = Math.floor(seconds / 3600);
+        var minutes = Math.floor(seconds / 60) % 60;
+        var rest = seconds % 60;
+
+        if (hours > 0) return hours + ":" + pad(minutes) + ":" + pad(rest);
+        return minutes + ":" + pad(rest);
+    }
 
     // Tap and the space key share this. getPlayerState only exists once the
     // player is ready, and an early key press can land before then.
@@ -165,6 +207,10 @@
     // end and user exit (Escape / leaving fullscreen) lead here.
     function returnToGrid() {
         if (!player) return;
+
+        clearInterval(timeLeftTimer);
+        timeLeftTimer = null;
+        timeLeft = null;
 
         // Destroy immediately to hide YouTube's end-screen recommendations.
         player.destroy();

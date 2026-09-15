@@ -15,6 +15,10 @@
     var PAGE_SIZE = 30;
     var MAX_TILES = 240;   // sliding-window cap on rendered cells
     var ROOT_MARGIN = 600; // px before the sentinel enters view to start loading
+    // A video that runs out rests on black before the wall comes back, so the
+    // end of one video doesn't slam straight into the next choice. A Back press
+    // waits for nothing: the feed is already rendered underneath.
+    var END_PAUSE_MS = 1500;
 
     var loading = false;
     var exhausted = false;
@@ -205,13 +209,14 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
-            returnToGrid();
+            returnToGrid(END_PAUSE_MS);
         }
     }
 
     // Tear down the player and uncover the feed, unchanged. Both natural end
-    // and user exit (Escape / leaving fullscreen) lead here.
-    function returnToGrid() {
+    // and user exit (Escape / leaving fullscreen) lead here; pauseMs is how
+    // long to sit on black first.
+    function returnToGrid(pauseMs) {
         if (!player) return;
 
         clearInterval(timeLeftTimer);
@@ -232,15 +237,15 @@
         playerContainer.innerHTML = "";
         playerContainer.appendChild(div);
 
-        // Brief pause on black, then uncover the feed that was there all
-        // along. Reloading would reshuffle it, which punishes a mistaken tap:
-        // going back has to show the same videos it did a moment ago.
+        // Uncover the feed that was there all along. Reloading would reshuffle
+        // it, which punishes a mistaken tap: going back has to show the same
+        // videos it did a moment ago.
         setTimeout(function () {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             }
             playerContainer.hidden = true;
-        }, 1500);
+        }, pauseMs);
     }
 
     // Switching apps on Android drops element-fullscreen, but Chrome doesn't
@@ -261,6 +266,6 @@
             wasBackgrounded = false;
             return;
         }
-        returnToGrid();
+        returnToGrid(0);
     });
 })();

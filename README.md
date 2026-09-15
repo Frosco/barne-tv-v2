@@ -80,6 +80,27 @@ go test -tags repro -run TestReproHarness -timeout 0
 # open http://127.0.0.1:8431
 ```
 
+### Browser regression scripts
+
+[`browser-tests/`](browser-tests/) holds Playwright scripts for the JS
+behaviour Go tests can't reach. Each one is a single `async (page) => {...}`
+function returning a JSON verdict, run through Playwright's code runner.
+
+They drive the **live site** and inject the working tree's `static/app.js` and
+`static/style.css` over it (the deployed copies are aborted), so a rule already
+deleted locally can't leak in from production. Running them against the live
+origin is deliberate: real YouTube embeds only load from a real origin.
+
+| Script | Guards |
+|---|---|
+| `return-to-grid.js` | Leaving a video keeps the same tiles and scroll position, never navigates. Back-out returns instantly; a finished video rests on black first. A backgrounded video doesn't make the next one swallow a Back press. |
+| `real-playback.js` | The same, against the real grid with a real YouTube player in real fullscreen. |
+| `player-touch.js` | A drag on the player can't scroll the feed underneath, and tap-to-pause still works. |
+
+Verdict fields are booleans; every one must be `true`. If a result surprises
+you, rebuild the rig before believing it — a stale page or a tap issued
+straight after a synthetic drag produces confident false failures.
+
 ## License
 
 MIT - see [LICENSE](LICENSE).

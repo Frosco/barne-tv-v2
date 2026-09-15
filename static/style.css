@@ -113,6 +113,12 @@ body {
     inset: 0;
     z-index: 100;
     background: #000;
+    /* A fixed element isn't a scroll container, so a drag here would scroll the
+       feed underneath -- and leaving the video would land somewhere else. The
+       player isn't always fullscreen (an Android app-switch drops it, and
+       requestFullscreen can be refused), so block the gesture outright. Taps
+       still reach the click-shield and still pause. */
+    touch-action: none;
 }
 
 .player-container[hidden] {

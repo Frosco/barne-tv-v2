@@ -114,7 +114,10 @@
         var videoId = cell.getAttribute("data-video-id");
         if (!videoId || player) return;
 
-        grid.hidden = true;
+        // The player is a fixed, opaque overlay, so it covers the feed without
+        // taking it out of layout. That is deliberate: the grid keeps its
+        // height and scroll position while a video plays, so leaving the video
+        // lands right back where the tap happened.
         playerContainer.hidden = false;
 
         player = new YT.Player("player", {
@@ -203,8 +206,8 @@
         }
     }
 
-    // Tear down the player and return to a fresh feed at the top. Both natural
-    // end and user exit (Escape / leaving fullscreen) lead here.
+    // Tear down the player and uncover the feed, unchanged. Both natural end
+    // and user exit (Escape / leaving fullscreen) lead here.
     function returnToGrid() {
         if (!player) return;
 
@@ -216,17 +219,24 @@
         player.destroy();
         player = null;
 
+        // This watch is over, so the next one starts from a clean slate: a
+        // backgrounding during this video must not swallow the Back press
+        // that ends the next one.
+        wasBackgrounded = false;
+
         var div = document.createElement("div");
         div.id = "player";
         playerContainer.innerHTML = "";
         playerContainer.appendChild(div);
 
-        // Brief pause on black, then reload for a brand-new shuffled feed.
+        // Brief pause on black, then uncover the feed that was there all
+        // along. Reloading would reshuffle it, which punishes a mistaken tap:
+        // going back has to show the same videos it did a moment ago.
         setTimeout(function () {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             }
-            window.location = "/";
+            playerContainer.hidden = true;
         }, 1500);
     }
 

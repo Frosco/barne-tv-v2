@@ -18,6 +18,7 @@
 
     var loading = false;
     var exhausted = false;
+    var wasBackgrounded = false; // see the fullscreenchange handler at the foot
 
     // YouTube IFrame API ready callback
     window.onYouTubeIframeAPIReady = function () {
@@ -117,7 +118,9 @@
         // The player is a fixed, opaque overlay, so it covers the feed without
         // taking it out of layout. That is deliberate: the grid keeps its
         // height and scroll position while a video plays, so leaving the video
-        // lands right back where the tap happened.
+        // lands right back where the tap happened. Don't hide the grid here --
+        // pruneTop() measures rows to compensate the scroll, and it needs them
+        // laid out.
         playerContainer.hidden = false;
 
         player = new YT.Player("player", {
@@ -248,7 +251,6 @@
     // fullscreen exit after that is the browser, not the user, so keep playing.
     // Only a fullscreen exit during uninterrupted foreground viewing is a
     // deliberate Back/Escape that should return to the grid.
-    var wasBackgrounded = false;
     document.addEventListener("visibilitychange", function () {
         if (document.hidden && player) wasBackgrounded = true;
     });

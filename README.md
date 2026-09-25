@@ -93,7 +93,7 @@ origin is deliberate: real YouTube embeds only load from a real origin.
 
 | Script | Guards |
 |---|---|
-| `return-to-grid.js` | Leaving a video keeps the same tiles and scroll position, never navigates. Back-out returns instantly; a finished video rests on black first. A backgrounded video doesn't make the next one swallow a Back press. |
+| `return-to-grid.js` | Leaving a video keeps the same tiles and scroll position, never navigates. Back-out returns instantly; a finished video rests on black first. A backgrounded video doesn't make the next one swallow a Back press. Escape gets out when fullscreen was refused, and space still pauses. |
 | `real-playback.js` | The same, against the real grid with a real YouTube player in real fullscreen. |
 | `player-touch.js` | A drag on the player can't scroll the feed underneath, and tap-to-pause still works. |
 

@@ -53,18 +53,18 @@ async (page) => {
       st.textContent = '.grid-cell{height:200px}';
       document.head.appendChild(st);
 
-      window.__spy = { created: 0, destroyed: 0, onStateChange: null };
+      window.__spy = { created: 0, destroyed: 0, onStateChange: null, paused: 0, played: 0, state: 1 };
       window.YT = {
         PlayerState: { ENDED: 0, PLAYING: 1, PAUSED: 2 },
         Player: function (id, opts) {
           window.__spy.created++;
           window.__spy.onStateChange = opts.events.onStateChange;
           this.destroy = function () { window.__spy.destroyed++; };
-          this.getPlayerState = function () { return 1; };
+          this.getPlayerState = function () { return window.__spy.state; };
           this.getDuration = function () { return 300; };
           this.getCurrentTime = function () { return 12; };
-          this.pauseVideo = function () {};
-          this.playVideo = function () {};
+          this.pauseVideo = function () { window.__spy.paused++; window.__spy.state = 2; };
+          this.playVideo = function () { window.__spy.played++; window.__spy.state = 1; };
         }
       };
 
@@ -128,7 +128,9 @@ async (page) => {
       playerHidden: pc ? pc.hidden : null,
       pageHeight: Math.round(document.documentElement.scrollHeight),
       created: window.__spy ? window.__spy.created : null,
-      destroyed: window.__spy ? window.__spy.destroyed : null
+      destroyed: window.__spy ? window.__spy.destroyed : null,
+      paused: window.__spy ? window.__spy.paused : null,
+      played: window.__spy ? window.__spy.played : null
     };
   });
 
@@ -212,6 +214,43 @@ async (page) => {
       secondVideoOpened: afterC.created === 2,
       backPressHonoured: afterC.destroyed === 2 && afterC.playerHidden === true
     }
+  };
+
+  // --- Case D: fullscreen refused, so Escape is the only way out ---
+  // Without fullscreen there is no fullscreenchange to ride back on, and a
+  // video that isn't finished would otherwise trap the page.
+  await setup();
+  await page.evaluate(() => {
+    Element.prototype.requestFullscreen = function () { return Promise.reject(new Error('refused')); };
+  });
+  await page.evaluate(() => window.scrollTo(0, 800));
+  await page.waitForTimeout(100);
+  const beforeD = await snapshot();
+  await openVideo('v20');
+  await page.waitForTimeout(300);
+  const duringD = await snapshot();
+  const fsRefused = await page.evaluate(() => document.fullscreenElement === null);
+
+  // Space must keep working on the same handler Escape is joining.
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(300);
+  const afterSpaceD = await snapshot();
+
+  await page.evaluate(() => window.__timeUntilHidden(() => {}));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(1200);
+  const afterD = await snapshot();
+  const msD = await hiddenAfter();
+
+  results.D_escapeWithoutFullscreen = {
+    before: beforeD, during: duringD, fsRefused,
+    afterSpace: afterSpaceD, after: afterD, hiddenAfterMs: msD,
+    verdict: Object.assign(verdict(beforeD, afterD), {
+      openedWithoutFullscreen: duringD.playerHidden === false && fsRefused,
+      spaceStillPauses: afterSpaceD.paused === 1,
+      escapeToreDownPlayer: afterD.destroyed === 1,
+      returnedPromptly: msD !== null && msD < 300
+    })
   };
 
   return JSON.stringify(results, null, 2);

@@ -201,10 +201,21 @@
     // A laptop has no shield to tap, so space drives playback there. Only
     // intercept while a video is up, leaving space to scroll the grid, and
     // ignore auto-repeat so holding it down doesn't strobe play/pause.
+    //
+    // Escape is the way out when there is no fullscreen to leave. If
+    // requestFullscreen was refused, no fullscreenchange ever fires, and an
+    // unfinished video would otherwise hold the page until it ran out. When
+    // the video IS fullscreen the browser may handle Escape itself and fire
+    // fullscreenchange too; whichever arrives second finds no player and
+    // returns.
     document.addEventListener("keydown", function (e) {
-        if (!player || e.code !== "Space" || e.repeat) return;
-        e.preventDefault();
-        togglePlayback();
+        if (!player || e.repeat) return;
+        if (e.code === "Space") {
+            e.preventDefault();
+            togglePlayback();
+        } else if (e.code === "Escape") {
+            returnToGrid(0);
+        }
     });
 
     function onPlayerStateChange(event) {

@@ -61,6 +61,10 @@ ssh root@refsnes-barnetv.no "chown barnetv:barnetv /opt/barne-tv/config.yaml && 
 The `chown` is needed because `scp` as `root` leaves the file root-owned, while
 the service runs as `barnetv`.
 
+The watch history lives at `/opt/barne-tv/history.json` (the service's working
+directory). It is the only server-side state, deploys leave it alone, and
+`setup-server.sh` doesn't create it, so copy it when moving to a new server.
+
 For fresh server setup, see [`deploy/setup-server.sh`](deploy/setup-server.sh).
 
 ## Tests

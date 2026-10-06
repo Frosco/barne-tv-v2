@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"html/template"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -192,6 +194,30 @@ func TestRecordPlayHandlerRejectsUnknownOrMissingID(t *testing.T) {
 	}
 }
 
+func TestRecordPlayHandlerRejectsOversizedBody(t *testing.T) {
+	history, _ := newTestHistory(t, 10)
+	handler := &RecordPlayHandler{Cache: testCache(), History: history}
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	mw.WriteField("id", "v1")
+	file, _ := mw.CreateFormFile("upload", "big.bin")
+	file.Write(bytes.Repeat([]byte("x"), 8<<10))
+	mw.Close()
+	req := httptest.NewRequest("POST", "/history", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", w.Code)
+	}
+	if n := len(history.Entries()); n != 0 {
+		t.Errorf("history has %d entries, want 0", n)
+	}
+}
+
 func TestRecordPlayHandlerReportsWriteFailure(t *testing.T) {
 	logs := captureLogs(t)
 	history := NewWatchHistory(filepath.Join(t.TempDir(), "missing-dir", "history.json"), 10)
@@ -235,8 +261,10 @@ func TestGridHandlerWithRealTemplates(t *testing.T) {
 		`href="/history" aria-label="Sett før"`,
 		`data-seed="`,
 		`id="scroll-sentinel"`,
+		`data-next-offset="`,
 		`id="player-container"`,
 		`https://www.youtube.com/iframe_api`,
+		`/static/style.css`,
 		`/static/app.js`,
 	} {
 		if !strings.Contains(body, want) {
@@ -280,6 +308,7 @@ func TestHistoryHandlerRendersNewestFirst(t *testing.T) {
 		`<h1 class="history-heading">Sett før</h1>`,
 		`href="/" aria-label="Tilbake til alle videoer"`,
 		`id="player-container"`,
+		`/static/style.css`,
 		`/static/app.js`,
 	} {
 		if !strings.Contains(body, want) {

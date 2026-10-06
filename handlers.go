@@ -119,6 +119,9 @@ type RecordPlayHandler struct {
 }
 
 func (h *RecordPlayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Public route with no login, and the body is only ever an ID: cap it so
+	// a stranger can't make us buffer an arbitrary multipart upload.
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
 	id := r.FormValue("id")
 	if id == "" {
 		http.Error(w, "missing id", http.StatusBadRequest)

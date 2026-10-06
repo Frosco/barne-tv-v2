@@ -4,7 +4,7 @@
     var ytReady = false;
     var player = null;
     var timeLeft = null;
-    var timeLeftTimer = null;
+    var tickTimer = null;
     var playerContainer = document.getElementById("player-container");
     var grid = document.querySelector(".grid");
     var sentinel = document.getElementById("scroll-sentinel");
@@ -19,10 +19,16 @@
     // end of one video doesn't slam straight into the next choice. A Back press
     // waits for nothing: the feed is already rendered underneath.
     var END_PAUSE_MS = 1500;
+    // A play only goes into the history after this much playback, so a
+    // mistaken tap backed out of straight away doesn't push a real favourite
+    // down the list.
+    var REPORT_AFTER_S = 10;
 
     var loading = false;
     var exhausted = false;
     var wasBackgrounded = false; // see the fullscreenchange handler at the foot
+    var playingVideoId = null;
+    var playReported = false;
 
     // YouTube IFrame API ready callback
     window.onYouTubeIframeAPIReady = function () {
@@ -127,6 +133,7 @@
         // laid out.
         playerContainer.hidden = false;
 
+        playingVideoId = videoId;
         player = new YT.Player("player", {
             videoId: videoId,
             playerVars: { autoplay: 1, rel: 0, controls: 0 },
@@ -150,12 +157,33 @@
         timeLeft.id = "time-left";
         playerContainer.appendChild(timeLeft);
         updateTimeLeft();
-        timeLeftTimer = setInterval(updateTimeLeft, 1000);
+        tickTimer = setInterval(tick, 1000);
 
         playerContainer.requestFullscreen().catch(function () {
             // Fullscreen may be blocked by browser; video still plays
         });
     });
+
+    // One clock for the countdown and the history. It reads playback time,
+    // so a video sitting paused never creeps towards the report threshold.
+    function tick() {
+        updateTimeLeft();
+
+        if (!player || typeof player.getCurrentTime !== "function") return;
+        if (player.getCurrentTime() >= REPORT_AFTER_S) reportWatched();
+    }
+
+    // Nothing waits on the report and nothing retries it: a failure only
+    // costs this video its place in the list, never playback.
+    function reportWatched() {
+        if (playReported || !playingVideoId) return;
+        playReported = true;
+
+        fetch("/history", {
+            method: "POST",
+            body: new URLSearchParams({ id: playingVideoId }),
+        }).catch(function () {});
+    }
 
     // getDuration reads 0 until metadata arrives, and stays 0 for a live
     // stream. Neither has a remaining time to show, so the corner stays
@@ -220,6 +248,9 @@
 
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED) {
+            // A clip shorter than the threshold still counts once it has
+            // played to the end. Report first: returnToGrid clears the ID.
+            reportWatched();
             returnToGrid(END_PAUSE_MS);
         }
     }
@@ -230,18 +261,21 @@
     function returnToGrid(pauseMs) {
         if (!player) return;
 
-        clearInterval(timeLeftTimer);
-        timeLeftTimer = null;
+        clearInterval(tickTimer);
+        tickTimer = null;
         timeLeft = null;
 
         // Destroy immediately to hide YouTube's end-screen recommendations.
         player.destroy();
         player = null;
 
-        // This watch is over, so the next one starts from a clean slate: a
-        // backgrounding during this video must not swallow the Back press
-        // that ends the next one.
+        // This watch is over, so the next one starts from a clean slate on
+        // all three: a backgrounding during this video must not swallow the
+        // Back press that ends the next one, and whether this video was
+        // reported must not decide whether the next one is.
         wasBackgrounded = false;
+        playingVideoId = null;
+        playReported = false;
 
         var div = document.createElement("div");
         div.id = "player";

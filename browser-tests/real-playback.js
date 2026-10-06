@@ -5,6 +5,8 @@ async (page) => {
   await page.unrouteAll();
   await page.route('**/static/app.js', r => r.abort());
   await page.route('**/static/style.css', r => r.abort());
+  // Never write test plays into the family's real history.
+  await page.route('**/history', r => r.abort());
 
   await page.goto('https://refsnes-barnetv.no/');
   await page.addStyleTag({ path: 'static/style.css' });

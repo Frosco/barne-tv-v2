@@ -97,6 +97,7 @@ origin is deliberate: real YouTube embeds only load from a real origin.
 | `return-to-grid.js` | Leaving a video keeps the same tiles and scroll position, never navigates. Back-out returns instantly; a finished video rests on black first. A backgrounded video doesn't make the next one swallow a Back press. Escape gets out when fullscreen was refused, and space still pauses. |
 | `real-playback.js` | The same, against the real grid with a real YouTube player in real fullscreen. |
 | `player-touch.js` | A drag on the player can't scroll the feed underneath, and tap-to-pause still works. |
+| `history.js` | A video is reported to the watch history once, after 10 s of play or at its end, and never after an early back-out. The corner button stays fixed in its corner and the player covers it. A seedless grid (the history page) plays a tile and returns to it without loading more videos. |
 
 Verdict fields are booleans; every one must be `true`. If a result surprises
 you, rebuild the rig before believing it — a stale page or a tap issued

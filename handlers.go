@@ -9,6 +9,14 @@ import (
 	"strconv"
 )
 
+// parseTemplates parses the page templates and their shared partials.
+// index.html must stay first: GridHandler calls Template.Execute, which runs
+// the first file of the set.
+func parseTemplates() (*template.Template, error) {
+	return template.ParseFiles("templates/index.html", "templates/history.html",
+		"templates/cells.html", "templates/partials.html")
+}
+
 // GridHandler renders the front page: a fresh fair ordering seeded per request,
 // with the first screenful server-rendered and the seed + next offset embedded
 // for the client's infinite scroll.
@@ -79,6 +87,22 @@ func (h *VideosHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	videos := h.Cache.Page(seed, offset, count)
 	var buf bytes.Buffer
 	if err := h.Template.ExecuteTemplate(&buf, "cells", videos); err != nil {
+		http.Error(w, "template error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = buf.WriteTo(w)
+}
+
+// HistoryHandler renders the watch history page, newest video first.
+type HistoryHandler struct {
+	History  *WatchHistory
+	Template *template.Template
+}
+
+func (h *HistoryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	if err := h.Template.ExecuteTemplate(&buf, "history.html", h.History.Entries()); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}

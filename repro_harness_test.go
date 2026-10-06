@@ -11,7 +11,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"testing"
 )
@@ -33,7 +32,7 @@ func TestReproHarness(t *testing.T) {
 	}
 	cache.Store(videos)
 
-	tmpl, err := template.ParseFiles("templates/index.html", "templates/cells.html")
+	tmpl, err := parseTemplates()
 	if err != nil {
 		t.Fatalf("parsing templates: %v", err)
 	}

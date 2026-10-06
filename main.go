@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"html/template"
 	"log"
 	"net/http"
 	"time"
@@ -32,7 +31,7 @@ func main() {
 	stop := cache.StartPeriodicRefresh(yt, cfg.Sources, interval)
 	defer stop()
 
-	tmpl, err := template.ParseFiles("templates/index.html", "templates/cells.html")
+	tmpl, err := parseTemplates()
 	if err != nil {
 		log.Fatalf("parsing templates: %v", err)
 	}

@@ -10,8 +10,8 @@ import (
 	"testing"
 )
 
-// testTemplate mirrors main.go's parse of index.html + cells.html: a template
-// named "index.html" with an associated "cells" template.
+// testTemplate is a minimal stub: a template named "index.html" with an
+// associated "cells" template.
 func testTemplate(t *testing.T) *template.Template {
 	t.Helper()
 	tmpl := template.Must(template.New("index.html").Parse(
@@ -204,5 +204,115 @@ func TestRecordPlayHandlerReportsWriteFailure(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), "recording play of v1") {
 		t.Errorf("log = %q, want it to mention recording play of v1", logs.String())
+	}
+}
+
+func realTemplates(t *testing.T) *template.Template {
+	t.Helper()
+	tmpl, err := parseTemplates()
+	if err != nil {
+		t.Fatalf("parsing templates: %v", err)
+	}
+	return tmpl
+}
+
+func TestGridHandlerWithRealTemplates(t *testing.T) {
+	handler := &GridHandler{Cache: testCache(), Template: realTemplates(t), PageSize: 9}
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if got := strings.Count(body, "data-video-id="); got != 9 {
+		t.Errorf("found %d videos, want 9", got)
+	}
+	for _, want := range []string{
+		`<title>Barne-TV</title>`,
+		`<meta name="robots" content="noindex, nofollow">`,
+		`href="/history" aria-label="Sett før"`,
+		`data-seed="`,
+		`id="scroll-sentinel"`,
+		`id="player-container"`,
+		`https://www.youtube.com/iframe_api`,
+		`/static/app.js`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body missing %q", want)
+		}
+	}
+}
+
+func getHistory(t *testing.T, h *WatchHistory) *httptest.ResponseRecorder {
+	t.Helper()
+	handler := &HistoryHandler{History: h, Template: realTemplates(t)}
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, httptest.NewRequest("GET", "/history", nil))
+	return w
+}
+
+func TestHistoryHandlerRendersNewestFirst(t *testing.T) {
+	h, _ := newTestHistory(t, 10)
+	record(t, h, vid("v1"), vid("v2"), vid("v3"))
+
+	w := getHistory(t, h)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Errorf("Content-Type = %q", got)
+	}
+	body := w.Body.String()
+	p3 := strings.Index(body, `data-video-id="v3"`)
+	p2 := strings.Index(body, `data-video-id="v2"`)
+	p1 := strings.Index(body, `data-video-id="v1"`)
+	if p3 < 0 || p2 < 0 || p1 < 0 || !(p3 < p2 && p2 < p1) {
+		t.Errorf("positions v3=%d v2=%d v1=%d, want present and ascending", p3, p2, p1)
+	}
+	if strings.Contains(body, "data-seed") {
+		t.Error("history grid must not carry data-seed")
+	}
+	for _, want := range []string{
+		`<title>Barne-TV – sett før</title>`,
+		`<h1 class="history-heading">Sett før</h1>`,
+		`href="/" aria-label="Tilbake til alle videoer"`,
+		`id="player-container"`,
+		`/static/app.js`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body missing %q", want)
+		}
+	}
+}
+
+func TestHistoryHandlerEmptyHistory(t *testing.T) {
+	h, _ := newTestHistory(t, 10)
+
+	body := getHistory(t, h).Body.String()
+
+	if !strings.Contains(body, `<p class="history-empty">Ingen videoer sett ennå</p>`) {
+		t.Error("body missing the empty-history line")
+	}
+	if got := strings.Count(body, "data-video-id="); got != 0 {
+		t.Errorf("found %d videos, want 0", got)
+	}
+}
+
+func TestHistoryHandlerEscapesTitles(t *testing.T) {
+	h, _ := newTestHistory(t, 10)
+	v := vid("v")
+	v.Title = "<b>Tom & \"Jerry\"</b>"
+	record(t, h, v)
+
+	body := getHistory(t, h).Body.String()
+
+	if !strings.Contains(body, "&lt;b&gt;Tom &amp;") {
+		t.Error("title not escaped")
+	}
+	if strings.Contains(body, "<b>Tom") {
+		t.Error("raw title markup reached the page")
 	}
 }

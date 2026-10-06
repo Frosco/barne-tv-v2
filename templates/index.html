@@ -1,23 +1,14 @@
 <!DOCTYPE html>
 <html lang="nb">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Barne-TV</title>
-    <link rel="stylesheet" href="/static/style.css">
+{{template "head"}}    <title>Barne-TV</title>
 </head>
 <body>
+    <a class="corner-button" href="/history" aria-label="Sett før"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></a>
     <div class="grid" data-seed="{{.Seed}}" data-next-offset="{{.NextOffset}}">
         {{template "cells" .Videos}}
     </div>
     <div id="scroll-sentinel" aria-hidden="true"></div>
 
-    <div id="player-container" class="player-container" hidden>
-        <div id="player"></div>
-    </div>
-
-    <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="/static/app.js"></script>
-</body>
+{{template "player"}}</body>
 </html>

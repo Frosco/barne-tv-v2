@@ -245,6 +245,7 @@ async (page) => {
     top: topE, scrolled: scrolledE, playing: playingE,
     verdict: {
       fixedPosition: topE.position === 'fixed',
+      minTapTarget: topE.rect.width >= 44 && topE.rect.height >= 44,
       reachableBeforePlay: topE.hitIsButton && scrolledE.hitIsButton,
       staysInCornerWhenScrolled: scrolledE.scrollY === 800 && scrolledE.rect.top === topE.rect.top,
       coveredDuringPlay: playingE.hitInPlayer

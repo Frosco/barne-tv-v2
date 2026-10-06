@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"math/rand/v2"
 	"net/http"
@@ -15,9 +14,7 @@ import (
 
 func silenceLogs(t *testing.T) {
 	t.Helper()
-	orig := log.Writer()
-	log.SetOutput(io.Discard)
-	t.Cleanup(func() { log.SetOutput(orig) })
+	captureLogs(t)
 }
 
 // captureLogs redirects log output into the returned buffer, for tests that

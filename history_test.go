@@ -138,6 +138,31 @@ func TestWatchHistoryWriteFailureKeepsEntryInMemory(t *testing.T) {
 	}
 }
 
+func TestWatchHistoryRemovesTempFileWhenRenameFails(t *testing.T) {
+	h, path := newTestHistory(t, 50)
+	// A directory at the history path lets CreateTemp and the write succeed
+	// but makes the final rename fail.
+	if err := os.Mkdir(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := h.Record(vid("v1")); err == nil {
+		t.Error("Record: want error when the rename fails, got nil")
+	}
+
+	files, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 || files[0].Name() != "history.json" {
+		names := make([]string, len(files))
+		for i, f := range files {
+			names[i] = f.Name()
+		}
+		t.Errorf("dir contains %v, want only the history.json directory", names)
+	}
+}
+
 func TestWatchHistoryLeavesNoTempFiles(t *testing.T) {
 	h, path := newTestHistory(t, 50)
 	record(t, h, vid("v1"), vid("v2"))

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"html/template"
+	"log"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
@@ -83,4 +84,31 @@ func (h *VideosHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = buf.WriteTo(w)
+}
+
+// RecordPlayHandler records a played video into the watch history. It accepts
+// only IDs present in the cache, so the history can't be filled with videos
+// from outside the configured sources.
+type RecordPlayHandler struct {
+	Cache   *VideoCache
+	History *WatchHistory
+}
+
+func (h *RecordPlayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	if id == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	videos := h.Cache.GetByIDs([]string{id})
+	if videos == nil {
+		http.Error(w, "unknown video", http.StatusBadRequest)
+		return
+	}
+	if err := h.History.Record(videos[0]); err != nil {
+		log.Printf("recording play of %s: %v", id, err)
+		http.Error(w, "could not record play", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

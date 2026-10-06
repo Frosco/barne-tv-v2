@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +20,16 @@ func silenceLogs(t *testing.T) {
 	t.Cleanup(func() { log.SetOutput(orig) })
 }
 
+// captureLogs redirects log output into the returned buffer, for tests that
+// expect the code under test to log.
+func captureLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	orig := log.Writer()
+	log.SetOutput(&buf)
+	t.Cleanup(func() { log.SetOutput(orig) })
+	return &buf
+}
 
 func TestVideoCacheGetByIDs(t *testing.T) {
 	cache := &VideoCache{}

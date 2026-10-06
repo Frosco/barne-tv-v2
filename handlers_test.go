@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -150,5 +152,57 @@ func TestVideosHandlerValidatesParams(t *testing.T) {
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("%s: status = %d, want 400", url, w.Code)
 		}
+	}
+}
+
+func postPlay(handler http.Handler, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("POST", "/history", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	return w
+}
+
+func TestRecordPlayHandlerRecordsKnownVideo(t *testing.T) {
+	history, _ := newTestHistory(t, 10)
+	handler := &RecordPlayHandler{Cache: testCache(), History: history}
+
+	w := postPlay(handler, "id=v3")
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", w.Code)
+	}
+	want := []Video{{ID: "v3", Title: "Three", ThumbnailURL: "http://img/3", SourceID: "S2"}}
+	if got := history.Entries(); !reflect.DeepEqual(got, want) {
+		t.Errorf("entries = %v, want %v", got, want)
+	}
+}
+
+func TestRecordPlayHandlerRejectsUnknownOrMissingID(t *testing.T) {
+	history, _ := newTestHistory(t, 10)
+	handler := &RecordPlayHandler{Cache: testCache(), History: history}
+
+	for _, body := range []string{"id=nope", "id=", ""} {
+		if w := postPlay(handler, body); w.Code != http.StatusBadRequest {
+			t.Errorf("body %q: status = %d, want 400", body, w.Code)
+		}
+	}
+	if n := len(history.Entries()); n != 0 {
+		t.Errorf("history has %d entries, want 0", n)
+	}
+}
+
+func TestRecordPlayHandlerReportsWriteFailure(t *testing.T) {
+	logs := captureLogs(t)
+	history := NewWatchHistory(filepath.Join(t.TempDir(), "missing-dir", "history.json"), 10)
+	handler := &RecordPlayHandler{Cache: testCache(), History: history}
+
+	w := postPlay(handler, "id=v1")
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", w.Code)
+	}
+	if !strings.Contains(logs.String(), "recording play of v1") {
+		t.Errorf("log = %q, want it to mention recording play of v1", logs.String())
 	}
 }

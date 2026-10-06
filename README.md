@@ -34,9 +34,10 @@ Single Go binary, no database. Everything runs in one process:
 
 - **youtube.go** - YouTube Data API v3 client (channels + playlists, paginated)
 - **cache.go** - Thread-safe in-memory video cache with periodic refresh
-- **handlers.go** - `GridHandler` renders the first screenful with a random per-load seed embedded; `VideosHandler` serves successive screenfuls from `/videos?seed=&offset=&count=` as HTML fragments, looping the pool in a fresh fair order each cycle
+- **history.go** - Watch history: the 50 most recent distinct videos, persisted to `history.json` (`-history` flag)
+- **handlers.go** - `RecordPlayHandler` (`POST /history`) and `HistoryHandler` (`GET /history`) record and show watched videos; `GridHandler` renders the first screenful with a random per-load seed embedded; `VideosHandler` serves successive screenfuls from `/videos?seed=&offset=&count=` as HTML fragments, looping the pool in a fresh fair order each cycle
 - **main.go** - Wires config, cache, and HTTP together
-- **templates/** - Go HTML templates: `index.html` page shell plus the shared `cells.html` tile fragment
+- **templates/** - Go HTML templates: `index.html` page shell, `history.html` for the watch history, plus the shared `cells.html` tile fragment and `partials.html`
 - **static/** - CSS and JS (infinite-scroll fetch/append/DOM-pruning, YouTube IFrame API integration, fullscreen playback)
 
 ## Deployment

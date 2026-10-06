@@ -2,14 +2,34 @@ package main
 
 import (
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"time"
 )
 
+const historyLimit = 50
+
+// newServeMux registers every route, so main and the repro harness serve the same thing.
+func newServeMux(cache *VideoCache, history *WatchHistory, tmpl *template.Template) *http.ServeMux {
+	const pageSize = 30
+	grid := &GridHandler{Cache: cache, Template: tmpl, PageSize: pageSize}
+	// MaxCount caps the work per request; clients may fetch up to two pages in one call.
+	videos := &VideosHandler{Cache: cache, Template: tmpl, PageSize: pageSize, MaxCount: 60}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", grid)
+	mux.Handle("/videos", videos)
+	mux.Handle("POST /history", &RecordPlayHandler{Cache: cache, History: history})
+	mux.Handle("GET /history", &HistoryHandler{History: history, Template: tmpl})
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	return mux
+}
+
 func main() {
 	configPath := flag.String("config", "config.yaml", "path to config file")
 	addr := flag.String("addr", ":8080", "listen address")
+	historyPath := flag.String("history", "history.json", "path to the watch history file")
 	flag.Parse()
 
 	cfg, err := LoadConfig(*configPath)
@@ -31,20 +51,16 @@ func main() {
 	stop := cache.StartPeriodicRefresh(yt, cfg.Sources, interval)
 	defer stop()
 
+	history := NewWatchHistory(*historyPath, historyLimit)
+	if err := history.Load(); err != nil {
+		log.Printf("watch history unreadable, starting empty: %v", err)
+	}
+
 	tmpl, err := parseTemplates()
 	if err != nil {
 		log.Fatalf("parsing templates: %v", err)
 	}
 
-	const pageSize = 30
-	grid := &GridHandler{Cache: cache, Template: tmpl, PageSize: pageSize}
-	// MaxCount caps the work per request; clients may fetch up to two pages in one call.
-	videos := &VideosHandler{Cache: cache, Template: tmpl, PageSize: pageSize, MaxCount: 60}
-
-	http.Handle("/", grid)
-	http.Handle("/videos", videos)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-
 	log.Printf("listening on %s with %d sources", *addr, len(cfg.Sources))
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	log.Fatal(http.ListenAndServe(*addr, newServeMux(cache, history, tmpl)))
 }

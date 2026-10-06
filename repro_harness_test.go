@@ -12,6 +12,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 )
 
@@ -37,11 +38,7 @@ func TestReproHarness(t *testing.T) {
 		t.Fatalf("parsing templates: %v", err)
 	}
 
-	const pageSize = 30
-	mux := http.NewServeMux()
-	mux.Handle("/", &GridHandler{Cache: cache, Template: tmpl, PageSize: pageSize})
-	mux.Handle("/videos", &VideosHandler{Cache: cache, Template: tmpl, PageSize: pageSize, MaxCount: 60})
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux := newServeMux(cache, NewWatchHistory(filepath.Join(t.TempDir(), "history.json"), historyLimit), tmpl)
 	mux.HandleFunc("/thumb.svg", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/svg+xml")
 		fmt.Fprint(w, thumbSVG)

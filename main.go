@@ -22,7 +22,14 @@ func newServeMux(cache *VideoCache, history *WatchHistory, tmpl *template.Templa
 	mux.Handle("/videos", videos)
 	mux.Handle("POST /history", &RecordPlayHandler{Cache: cache, History: history})
 	mux.Handle("GET /history", &HistoryHandler{History: history, Template: tmpl})
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	// no-cache makes browsers revalidate on every load (a cheap 304) instead of
+	// reusing a heuristically cached app.js/style.css that no longer matches
+	// the HTML.
+	static := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+	mux.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		static.ServeHTTP(w, r)
+	})
 	return mux
 }
 

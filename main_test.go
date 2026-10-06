@@ -34,6 +34,14 @@ func TestServeMuxRoutes(t *testing.T) {
 			t.Errorf("GET /history body missing %q", want)
 		}
 	}
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, httptest.NewRequest("GET", "/static/style.css", nil))
+	if w.Code != http.StatusOK {
+		t.Errorf("GET /static/style.css status = %d, want 200", w.Code)
+	}
+	if got := w.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("GET /static/style.css Cache-Control = %q, want no-cache", got)
+	}
 	if body := get("/"); !strings.Contains(body, `id="scroll-sentinel"`) {
 		t.Errorf("GET / body missing scroll sentinel")
 	}
